@@ -13,7 +13,7 @@ SSH_KEY="${SSH_KEY:-./deploy/LightsailDefaultKey-ca-central-1.pem}"
 SSH_USER="${SSH_USER:-ubuntu}"
 APP_NAME="fluo"
 REGION="${AWS_REGION:-ca-central-1}"
-ACCOUNT_ID="779400169222"
+ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
 ECR_URI="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${APP_NAME}"
 
 # --- Validate ---

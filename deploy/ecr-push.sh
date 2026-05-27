@@ -8,7 +8,7 @@ set -euo pipefail
 
 APP_NAME="fluo"
 REGION="${AWS_REGION:-ca-central-1}"
-ACCOUNT_ID="779400169222"
+ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
 ECR_URI="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${APP_NAME}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -19,10 +19,14 @@ echo "Region: ${REGION}"
 echo "ECR:    ${ECR_URI}"
 echo ""
 
-# --- Create ECR repo if it doesn't exist ---
-echo "[1/3] Ensuring ECR repository exists..."
-aws ecr describe-repositories --repository-names "${APP_NAME}" --region "${REGION}" 2>/dev/null || \
-    aws ecr create-repository --repository-name "${APP_NAME}" --region "${REGION}" --image-scanning-configuration scanOnPush=true
+# --- Ensure ECR repo exists ---
+echo "[1/3] Checking ECR repository exists..."
+if ! aws ecr describe-repositories --repository-names "${APP_NAME}" --region "${REGION}" >/dev/null 2>&1; then
+    echo "ERROR: ECR repository '${APP_NAME}' was not found in ${REGION} for account ${ACCOUNT_ID}."
+    echo "Create it once with an admin identity:"
+    echo "  aws ecr create-repository --repository-name ${APP_NAME} --region ${REGION} --image-scanning-configuration scanOnPush=true"
+    exit 1
+fi
 
 # --- Log in to ECR ---
 echo "[2/3] Logging in to ECR..."
