@@ -138,7 +138,7 @@ export default function UserPanelModal() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between p-4 bg-[#f1f4f3] rounded-xl">
+            <div className="p-4 bg-[#f1f4f3] rounded-xl space-y-3">
               <div>
                 <div className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
                   Credits Balance
@@ -150,28 +150,24 @@ export default function UserPanelModal() {
                   {Math.round(credits)} credits
                 </div>
               </div>
+              <p className="text-xs text-[#596060]">Top up your credits:</p>
               <div className="flex gap-2">
                 {[
-                  ["5", "$5"],
-                  ["10", "$10"],
-                  ["20", "$20"],
-                ].map(([pack, label]) => (
+                  ["5", "$5", "100 credits"],
+                  ["10", "$10", "200 credits"],
+                  ["20", "$20", "400 credits"],
+                ].map(([pack, price, credits]) => (
                   <button
                     key={pack}
                     onClick={() => buyCredits(pack)}
-                    className="btn-primary px-3 py-2 rounded-xl text-sm font-medium"
+                    className="btn-primary flex-1 px-2 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5"
                   >
-                    {label}
+                    <span className="font-semibold">{price}</span>
+                    <span className="text-xs font-normal opacity-70">
+                      {credits}
+                    </span>
                   </button>
                 ))}
-              </div>
-            </div>
-            <div className="p-4 bg-[#f1f4f3] rounded-xl">
-              <div className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
-                API Usage (Total)
-              </div>
-              <div className="text-sm" style={{ color: "var(--dark)" }}>
-                ${totalCost.toFixed(4)}
               </div>
             </div>
             <div className="p-4 bg-[#f1f4f3] rounded-xl">

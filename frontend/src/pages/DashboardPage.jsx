@@ -244,20 +244,23 @@ export default function DashboardPage() {
               style={{ position: "relative", zIndex: 10 }}
             >
               {[
-                ["5", "$5"],
-                ["10", "$10"],
-                ["20", "$20"],
-              ].map(([pack, label]) => (
+                ["5", "$5", "100 credits"],
+                ["10", "$10", "200 credits"],
+                ["20", "$20", "400 credits"],
+              ].map(([pack, price, credits]) => (
                 <button
                   key={pack}
                   onClick={() => buyCredits(pack)}
-                  className="py-2 px-4 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95"
+                  className="py-2 px-4 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 flex flex-col items-center"
                   style={{
                     background: "var(--on-primary)",
                     color: "var(--primary)",
                   }}
                 >
-                  {label}
+                  <span>{price}</span>
+                  <span className="text-xs font-normal opacity-70">
+                    {credits}
+                  </span>
                 </button>
               ))}
             </div>

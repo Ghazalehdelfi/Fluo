@@ -181,8 +181,18 @@ export default function Sidebar() {
   function activeClass(id) {
     if (id === "dashboard" && page === "dashboard") return "active";
     if (id === "teacher-classes" && page === "teacher-classes") return "active";
-    if (id === "teacher-homework" && (page === "teacher-homework" || page === "create-homework" || page === "homework-detail")) return "active";
-    if (id === "student-homework" && (page === "student-homework" || page === "student-homework-detail")) return "active";
+    if (
+      id === "teacher-homework" &&
+      (page === "teacher-homework" ||
+        page === "create-homework" ||
+        page === "homework-detail")
+    )
+      return "active";
+    if (
+      id === "student-homework" &&
+      (page === "student-homework" || page === "student-homework-detail")
+    )
+      return "active";
     if (id === "notes" && page === "language" && section === "notes")
       return "active";
     if (
@@ -240,33 +250,48 @@ export default function Sidebar() {
           <>
             <a
               className={`sidebar-nav-item ${activeClass("teacher-classes")}`}
-              onClick={() => { navigate("/teacher/classes"); closeMobile(); }}
+              onClick={() => {
+                navigate("/teacher/classes");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">groups</span>
               <span>My Classes</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("teacher-homework")}`}
-              onClick={() => { navigate("/teacher/homework"); closeMobile(); }}
+              onClick={() => {
+                navigate("/teacher/homework");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">assignment</span>
               <span>Homework</span>
             </a>
             <div className="px-3 pt-4 pb-1">
-              <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: "var(--accent1)" }}>
+              <p
+                className="text-[10px] uppercase tracking-widest font-semibold"
+                style={{ color: "var(--accent1)" }}
+              >
                 My Content
               </p>
             </div>
             <a
               className={`sidebar-nav-item ${activeClass("notes")}`}
-              onClick={() => { navigateToActiveSection("notes"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("notes");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">upload_file</span>
               <span>Upload Notes</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("vocabulary")}`}
-              onClick={() => { navigateToActiveSection("vocabulary"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("vocabulary");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">menu_book</span>
               <span>Knowledge Base</span>
@@ -277,49 +302,70 @@ export default function Sidebar() {
           <>
             <a
               className={`sidebar-nav-item ${activeClass("dashboard")}`}
-              onClick={() => { navigate("/"); closeMobile(); }}
+              onClick={() => {
+                navigate("/");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">dashboard</span>
               <span>Dashboard</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("student-homework")}`}
-              onClick={() => { navigate("/homework"); closeMobile(); }}
+              onClick={() => {
+                navigate("/homework");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">assignment</span>
               <span>My Homework</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("notes")}`}
-              onClick={() => { navigateToActiveSection("notes"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("notes");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">upload_file</span>
               <span>Upload Notes</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("vocabulary")}`}
-              onClick={() => { navigateToActiveSection("vocabulary"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("vocabulary");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">menu_book</span>
               <span>Knowledge Base</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("flashcards")}`}
-              onClick={() => { navigateToActiveSection("flashcards"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("flashcards");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">quiz</span>
               <span>Flashcards</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("practice")}`}
-              onClick={() => { navigateToActiveSection("practice"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("practice");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">fitness_center</span>
               <span>Conversation Practice</span>
             </a>
             <a
               className={`sidebar-nav-item ${activeClass("grammar-practice")}`}
-              onClick={() => { navigateToActiveSection("grammar-practice"); closeMobile(); }}
+              onClick={() => {
+                navigateToActiveSection("grammar-practice");
+                closeMobile();
+              }}
             >
               <span className="material-symbols-outlined">exercise</span>
               <span>Grammar Practice</span>
@@ -329,18 +375,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-4 mt-auto space-y-1">
-        <a
-          className="sidebar-nav-item"
-          onClick={() => { setShowUserPanelState(true); closeMobile(); }}
+        <div
+          className="px-6 py-4 mt-4 bg-[#eaefee] rounded-2xl flex items-center gap-3 mx-2 cursor-pointer hover:bg-[#dde5e3] transition-colors"
+          onClick={() => {
+            setShowUserPanelState(true);
+            closeMobile();
+          }}
         >
-          <span className="material-symbols-outlined">settings</span>
-          <span>Settings</span>
-        </a>
-        <div className="px-6 py-4 mt-4 bg-[#eaefee] rounded-2xl flex items-center gap-3 mx-2">
-          <div
-            className="w-8 h-8 rounded-full bg-[#436565] flex items-center justify-center text-xs font-bold text-white cursor-pointer"
-            onClick={() => setShowUserPanelState(true)}
-          >
+          <div className="w-8 h-8 rounded-full bg-[#436565] flex items-center justify-center text-xs font-bold text-white">
             {userInitial}
           </div>
           <div className="flex-1 min-w-0">
@@ -348,9 +390,13 @@ export default function Sidebar() {
               {currentUser?.email || "Account"}
             </p>
             {isTeacher ? (
-              <p className="text-[10px] text-[#596060] uppercase tracking-wider">Teacher</p>
+              <p className="text-[10px] text-[#596060] uppercase tracking-wider">
+                Teacher
+              </p>
             ) : (
-              <p className="text-[10px] text-[#596060] uppercase tracking-wider">${credits}</p>
+              <p className="text-[10px] text-[#596060] uppercase tracking-wider">
+                ${credits}
+              </p>
             )}
           </div>
         </div>
