@@ -62,7 +62,7 @@ from auth import (
     require_teacher,
     require_student,
 )
-from cost_tracker import TrackedOpenAI, check_sufficient_credits, SessionCostTracker
+from cost_tracker import TrackedOpenAI, check_sufficient_credits
 from agents.note_extractor import NoteExtractorAgent
 from agents.lesson_planner import LessonPlannerAgent
 from agents.cluster_topic_agent import ClusterTopicAgent
@@ -286,7 +286,7 @@ async def register(body: AuthRegister, db: Session = Depends(get_db)):
     if exists:
         raise HTTPException(status_code=409, detail="Account already exists")
 
-    welcome_bonus = float(os.getenv("WELCOME_BONUS_CREDITS", "5.0"))
+    welcome_bonus = float(os.getenv("WELCOME_BONUS_CREDITS", "100"))
     user = User(
         email=email,
         hashed_password=hash_password(body.password),
@@ -605,7 +605,7 @@ async def upload_notes(
     log_api_call("POST", "/api/upload-notes", f"language_id={language_id}")
 
     # Check credits before making API calls
-    if not check_sufficient_credits(user, min_credits=0.01):
+    if not check_sufficient_credits(user, min_credits=1):
         raise HTTPException(
             status_code=402,
             detail="Insufficient credits. Please purchase more credits to continue.",
@@ -991,7 +991,7 @@ async def resolve_pending_grammar(
                 status_code=404, detail="Existing grammar card not found"
             )
 
-        if not check_sufficient_credits(user, min_credits=0.01):
+        if not check_sufficient_credits(user, min_credits=1):
             raise HTTPException(
                 status_code=402,
                 detail="Insufficient credits. Please purchase more credits to continue.",
@@ -1123,7 +1123,7 @@ async def get_grammar_detail_card(
         except json.JSONDecodeError:
             pass  # fall through to regenerate
 
-    if not check_sufficient_credits(user, min_credits=0.01):
+    if not check_sufficient_credits(user, min_credits=1):
         raise HTTPException(
             status_code=402,
             detail="Insufficient credits. Please purchase more credits to continue.",
@@ -1287,7 +1287,7 @@ async def start_grammar_practice(
     if not item:
         raise HTTPException(status_code=404, detail="Grammar concept not found")
 
-    if not check_sufficient_credits(user, min_credits=0.01):
+    if not check_sufficient_credits(user, min_credits=1):
         raise HTTPException(
             status_code=402,
             detail="Insufficient credits. Please purchase more credits to continue.",
@@ -1320,15 +1320,12 @@ async def start_grammar_practice(
         api_key, user_id=user.id, session_id=session_id, db_factory=SessionLocal
     )
 
-    cost_tracker = SessionCostTracker(user_id=user.id, session_id=session_id)
-
     agent = GrammarPracticeAgent(
         client=tracked_client,
         target_language=lang.name,
         native_language=native_lang,
         level=user_level,
         fluency_level=item.fluency_level or "low",
-        cost_tracker=cost_tracker,
     )
 
     questions = agent.generate_questions(grammar_card)
@@ -1339,7 +1336,6 @@ async def start_grammar_practice(
         "questions": questions,
         "answers": {},
         "correct_count": 0,
-        "cost_tracker": cost_tracker,
     }
 
     return {
@@ -1382,7 +1378,6 @@ async def submit_grammar_practice_answer(
     agent = GrammarPracticeAgent(
         client=tracked_client,
         target_language=lang_name,
-        cost_tracker=session["cost_tracker"],
     )
 
     result = agent.evaluate_answer(question, body.user_answer)
@@ -1449,12 +1444,6 @@ async def end_grammar_practice(
         new_fluency = item.fluency_level
     else:
         new_fluency = None
-
-    # Flush costs to DB
-    try:
-        session["cost_tracker"].flush_to_db(db)
-    except Exception:
-        pass
 
     del grammar_practice_sessions[(user.id, session_id)]
 
@@ -1578,7 +1567,7 @@ async def start_lesson(
     )
 
     # Check credits
-    if not check_sufficient_credits(user, min_credits=0.01):
+    if not check_sufficient_credits(user, min_credits=1):
         raise HTTPException(
             status_code=402,
             detail="Insufficient credits. Please purchase more credits to continue.",
@@ -1793,7 +1782,7 @@ async def start_scenario(
         f"scenario={body.scenario[:60]}, level={body.level}",
     )
 
-    if not check_sufficient_credits(user, min_credits=0.01):
+    if not check_sufficient_credits(user, min_credits=1):
         raise HTTPException(
             status_code=402,
             detail="Insufficient credits. Please purchase more credits to continue.",
@@ -2328,7 +2317,7 @@ async def placement_test_start(
     """Start an adaptive placement test for a language."""
     log_api_call("POST", f"/api/placement-test/start/{language_id}")
 
-    if not check_sufficient_credits(user, min_credits=0.01):
+    if not check_sufficient_credits(user, min_credits=1):
         raise HTTPException(status_code=402, detail="Insufficient credits.")
 
     lang = (
@@ -2690,9 +2679,9 @@ async def placement_test_save_content(
 # ── Stripe helpers ──────────────────────────────────────────────
 
 CREDIT_PACKS = {
-    "5":  {"amount_cents": 500,  "credits": 5.0},
-    "10": {"amount_cents": 1000, "credits": 10.0},
-    "20": {"amount_cents": 2000, "credits": 20.0},
+    "5": {"amount_cents": 500, "credits": 100},  # $5 = 100 credits
+    "10": {"amount_cents": 1000, "credits": 200},  # $10 = 200 credits
+    "20": {"amount_cents": 2000, "credits": 400},  # $20 = 400 credits
 }
 
 
@@ -2733,7 +2722,10 @@ async def create_checkout_session(
 
     pack = CREDIT_PACKS.get(body.pack)
     if not pack:
-        raise HTTPException(status_code=400, detail=f"Invalid pack. Choose one of: {', '.join(CREDIT_PACKS)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid pack. Choose one of: {', '.join(CREDIT_PACKS)}",
+        )
 
     try:
         customer_id = get_or_create_stripe_customer(user, db)
@@ -2800,7 +2792,9 @@ async def handle_stripe_webhook(request: Request):
         session_data = event["data"]["object"]
         client_ref = session_data.get("client_reference_id")
         metadata = session_data.get("metadata", {})
-        credits_to_add = float(metadata.get("credits", str(CREDIT_PACK_CREDITS)))
+        credits_to_add = float(
+            metadata.get("credits", "100")
+        )  # fallback: 100 credits ($5 pack)
 
         if not client_ref:
             logger.warning(

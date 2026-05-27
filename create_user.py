@@ -5,8 +5,8 @@ Usage:
     python create_user.py <username> [--credits N]
 
 Examples:
-    python create_user.py alice                  # 5.0 credits (default)
-    python create_user.py bob --credits 10       # 10.0 credits
+    python create_user.py alice                  # 100 credits (default)
+    python create_user.py bob --credits 200       # 200 credits
 """
 
 import argparse
@@ -26,7 +26,9 @@ def generate_password(length: int = 10) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-def create_user(username: str, credits: float, role: str = "student") -> tuple[str, float, str]:
+def create_user(
+    username: str, credits: float, role: str = "student"
+) -> tuple[str, float, str]:
     db = SessionLocal()
     try:
         existing = db.query(User).filter(User.email == username).first()
@@ -51,11 +53,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a new Fluō user")
     parser.add_argument("username", help="Username for the new account")
     parser.add_argument(
-        "--credits", type=float, default=5.0, help="Credits to assign (default: 5.0)"
+        "--credits", type=float, default=100, help="Credits to assign (default: 100)"
     )
     parser.add_argument(
-        "--role", choices=["student", "teacher"], default="student",
-        help="User role (default: student)"
+        "--role",
+        choices=["student", "teacher"],
+        default="student",
+        help="User role (default: student)",
     )
     args = parser.parse_args()
 

@@ -147,7 +147,7 @@ export default function UserPanelModal() {
                   className="text-2xl font-semibold"
                   style={{ color: "var(--dark)" }}
                 >
-                  ${credits.toFixed(2)}
+                  {Math.round(credits)} credits
                 </div>
               </div>
               <div className="flex gap-2">

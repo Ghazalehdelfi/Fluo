@@ -150,7 +150,7 @@ export default function LandingPage() {
               >
                 redeem
               </span>
-              $5 free credits on sign-up
+              100 free credits on sign-up
             </span>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function LandingPage() {
                 <span className="text-sm font-bold text-[var(--dark)]">
                   Sign up today and get{" "}
                   <span className="text-[var(--primary)]">
-                    $5 in free credits
+                    100 free credits
                   </span>{" "}
                   — no card required.
                 </span>
@@ -412,10 +412,10 @@ export default function LandingPage() {
                   redeem
                 </span>
                 <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
-                  $5 free to start
+                  100 credits free to start
                 </h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
-                  Every new account gets $5 in starter credits — enough to
+                  Every new account gets 100 free starter credits — enough to
                   explore flashcards, live conversation practice, and note
                   uploads.
                 </p>

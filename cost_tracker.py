@@ -20,6 +20,11 @@ from agents.logging_utils import Colors, get_logger
 
 logger = get_logger(__name__)
 
+# ── Credit conversion ────────────────────────────────────────
+# 100 credits costs $5 (purchase price), but internally equals $4 of API budget.
+# Deduction rate: 1 USD of raw API cost = 25 credits charged to user.
+CREDITS_PER_API_USD: float = 25.0
+
 # ── Pricing table (USD) ────────────────────────────────────────
 # Source: https://openai.com/pricing  (update periodically)
 
@@ -199,8 +204,8 @@ class SessionCostTracker:
             )
             db.add(log)
 
-        # Deduct credits (charge = 2× raw cost)
-        charge = round(total * 2, 6)
+        # Deduct credits (2× raw cost markup, then convert to credit units)
+        charge = round(total * 2 * CREDITS_PER_API_USD, 6)
         user = db.query(User).filter(User.id == self.user_id).first()
         if user:
             user.credits_balance = max(0.0, user.credits_balance - charge)
@@ -209,12 +214,12 @@ class SessionCostTracker:
 
         logger.info(
             f"   {Colors.GREEN}💳 Session total: ${total:.4f} "
-            f"(charged ${charge:.4f} credits){Colors.END}"
+            f"(charged {charge:.2f} credits){Colors.END}"
         )
         return total
 
 
-def check_sufficient_credits(user: User, min_credits: float = 0.01) -> bool:
+def check_sufficient_credits(user: User, min_credits: float = 1.0) -> bool:
     """Return True if the user has enough credits to start a session."""
     return user.credits_balance >= min_credits
 
@@ -383,7 +388,7 @@ class TrackedOpenAI:
         cost: float,
     ):
         """Write one UsageLog row and deduct credits in a single transaction."""
-        charge = round(cost * 5, 6)
+        charge = round(cost * 5 * CREDITS_PER_API_USD, 6)
 
         with self._lock:
             self._total_cost += cost

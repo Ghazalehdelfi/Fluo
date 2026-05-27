@@ -236,7 +236,7 @@ export default function DashboardPage() {
                 Credits Balance
               </p>
               <div className="text-5xl font-extrabold tracking-tight">
-                ${(dashData.credits || 0).toFixed(2)}
+                {Math.round(dashData.credits || 0)} credits
               </div>
             </div>
             <div
