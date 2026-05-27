@@ -7,6 +7,7 @@ export default function AuthScreen({ initialMode = "signin", onClose }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("student");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +35,11 @@ export default function AuthScreen({ initialMode = "signin", onClose }) {
       const resp = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          ...(mode === "signup" && { role }),
+        }),
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -57,137 +62,7 @@ export default function AuthScreen({ initialMode = "signin", onClose }) {
   }
 
   return (
-    <div className="card relative w-full max-w-sm rounded-3xl p-8 shadow-[0_24px_64px_rgba(17,56,44,0.18)]">
-      <section className="promo-panel rounded-3xl p-8 md:p-10 lg:p-12">
-        <div className="inline-flex items-center rounded-full border border-[rgba(17,56,44,0.16)] bg-white/75 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
-          Language coaching, reimagined
-        </div>
-
-        <h1 className="mt-5 text-4xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-5xl">
-          Fluō helps students think in a new language, not just memorize words.
-        </h1>
-
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-[var(--accent1)] md:text-lg">
-          Upload notes, build personalized flashcards, and practice in adaptive
-          conversations that respond to your level. Teachers can assign focused
-          homework and track real progress.
-        </p>
-
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <div className="feature-tile rounded-2xl p-4">
-            <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--dark)]">
-              Adaptive Practice
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              Dialogue sessions adjust to vocabulary, grammar confidence, and
-              CEFR level.
-            </p>
-          </div>
-          <div className="feature-tile rounded-2xl p-4">
-            <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--dark)]">
-              Teacher Workflows
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              Create classes, attach vocabulary and grammar tasks, then review
-              student submissions.
-            </p>
-          </div>
-          <div className="feature-tile rounded-2xl p-4">
-            <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--dark)]">
-              Smart Note Extraction
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              Turn lecture notes and study sheets into instantly usable learning
-              material.
-            </p>
-          </div>
-          <div className="feature-tile rounded-2xl p-4">
-            <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--dark)]">
-              Progress Visibility
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              Track fluency growth, practice consistency, and topic mastery in
-              one dashboard.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-3 md:grid-cols-3">
-          <div className="pricing-tile rounded-2xl p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent1)]">
-              Starter
-            </p>
-            <p className="mt-2 text-2xl font-black text-[var(--dark)]">Free</p>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              Perfect for getting started with note uploads and daily speaking
-              drills.
-            </p>
-          </div>
-          <div className="pricing-tile pricing-tile-highlight rounded-2xl p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--dark)]">
-              Pro Learner
-            </p>
-            <p className="mt-2 text-2xl font-black text-[var(--dark)]">
-              Most Popular
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--dark)]">
-              Deeper conversation sessions, faster growth loops, and richer
-              progress analytics.
-            </p>
-          </div>
-          <div className="pricing-tile rounded-2xl p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent1)]">
-              Teacher Suite
-            </p>
-            <p className="mt-2 text-2xl font-black text-[var(--dark)]">
-              Classroom
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              Build homework, manage classes, and track student learning
-              outcomes in one view.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <blockquote className="testimonial-tile rounded-2xl p-4">
-            <p className="text-sm leading-relaxed text-[var(--dark)]">
-              "My students finally practice between classes. Homework completion
-              has never been this consistent."
-            </p>
-            <footer className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent1)]">
-              Instructor, B1 Turkish Cohort
-            </footer>
-          </blockquote>
-          <blockquote className="testimonial-tile rounded-2xl p-4">
-            <p className="text-sm leading-relaxed text-[var(--dark)]">
-              "The conversation practice feels like a coach who actually
-              remembers what I struggle with."
-            </p>
-            <footer className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent1)]">
-              Student, Independent Learner
-            </footer>
-          </blockquote>
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setMode("signup")}
-            className="btn-primary rounded-xl px-5 py-3 text-sm font-semibold"
-          >
-            Create Account
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("signin")}
-            className="btn-secondary rounded-xl px-5 py-3 text-sm font-semibold"
-          >
-            Sign In
-          </button>
-        </div>
-      </section>
-
+    <div className="card relative w-full max-w-md rounded-3xl p-10 shadow-[0_24px_64px_rgba(17,56,44,0.18)]">
       {onClose && (
         <button
           onClick={onClose}
@@ -258,18 +133,61 @@ export default function AuthScreen({ initialMode = "signin", onClose }) {
           />
         </div>
         {mode === "signup" && (
-          <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--dark)]">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              className="input-field w-full rounded-xl px-4 py-2.5 text-sm"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
+          <>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--dark)]">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                className="input-field w-full rounded-xl px-4 py-2.5 text-sm"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--dark)]">
+                I am a…
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRole("student")}
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                    role === "student"
+                      ? "border-[var(--primary)] bg-[var(--primary-container)] text-[var(--dark)]"
+                      : "border-[rgba(172,179,178,0.3)] bg-white text-[var(--accent1)] hover:bg-[var(--surface-container-low)]"
+                  }`}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18 }}
+                  >
+                    person
+                  </span>
+                  Self Learner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole("teacher")}
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                    role === "teacher"
+                      ? "border-[var(--primary)] bg-[var(--primary-container)] text-[var(--dark)]"
+                      : "border-[rgba(172,179,178,0.3)] bg-white text-[var(--accent1)] hover:bg-[var(--surface-container-low)]"
+                  }`}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18 }}
+                  >
+                    school
+                  </span>
+                  Teacher
+                </button>
+              </div>
+            </div>
+          </>
         )}
         {error && <p className="text-xs text-red-600">{error}</p>}
         <button

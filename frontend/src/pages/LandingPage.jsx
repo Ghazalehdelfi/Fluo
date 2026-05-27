@@ -120,6 +120,39 @@ export default function LandingPage() {
               Sign in
             </button>
           </div>
+
+          {/* Trust bar */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-[var(--accent1)]">
+            <span className="flex items-center gap-1.5">
+              <span
+                className="material-symbols-outlined text-[var(--primary)]"
+                style={{ fontSize: 16 }}
+              >
+                check_circle
+              </span>
+              No subscription
+            </span>
+            <span className="text-[var(--outline-variant)]">·</span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="material-symbols-outlined text-[var(--primary)]"
+                style={{ fontSize: 16 }}
+              >
+                bolt
+              </span>
+              Pay only for what you use
+            </span>
+            <span className="text-[var(--outline-variant)]">·</span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="material-symbols-outlined text-[var(--primary)]"
+                style={{ fontSize: 16 }}
+              >
+                redeem
+              </span>
+              $5 free credits on sign-up
+            </span>
+          </div>
         </div>
       </section>
 
@@ -298,7 +331,114 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Teacher Section ─────────────────────────── */}
+      {/* ── Pricing model ──────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-5 py-16 md:px-10">
+        <div className="rounded-3xl border border-[rgba(67,101,101,0.18)] bg-white p-8 md:p-12">
+          <div className="grid gap-10 md:grid-cols-2 md:items-center">
+            <div>
+              <div className="mb-4 inline-flex items-center rounded-full bg-[var(--primary-container)] px-4 py-1.5">
+                <span className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
+                  Pricing
+                </span>
+              </div>
+              <h2 className="text-3xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-4xl">
+                No subscription.
+                <br />
+                Ever.
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-[var(--accent1)]">
+                Fluō runs on a simple credit system. You top up when you want,
+                spend only when you use AI features, and never get charged for
+                sitting idle. No monthly fees, no lock-in.
+              </p>
+              <div className="mt-5 inline-flex items-center gap-2.5 rounded-2xl border border-[rgba(67,101,101,0.25)] bg-[var(--primary-container)] px-5 py-3">
+                <span
+                  className="material-symbols-outlined text-[var(--primary)]"
+                  style={{ fontSize: 22 }}
+                >
+                  redeem
+                </span>
+                <span className="text-sm font-bold text-[var(--dark)]">
+                  Sign up today and get{" "}
+                  <span className="text-[var(--primary)]">
+                    $5 in free credits
+                  </span>{" "}
+                  — no card required.
+                </span>
+              </div>
+              <button
+                onClick={() => openAuth("signup")}
+                className="btn-primary mt-6 rounded-2xl px-6 py-3 text-sm font-semibold"
+              >
+                Get free starter credits
+              </button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+                <span
+                  className="material-symbols-outlined text-[var(--primary)]"
+                  style={{ fontSize: 28 }}
+                >
+                  account_balance_wallet
+                </span>
+                <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
+                  Top up any time
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
+                  Add credits whenever you need them — $5, $10, or more. They
+                  never expire.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+                <span
+                  className="material-symbols-outlined text-[var(--primary)]"
+                  style={{ fontSize: 28 }}
+                >
+                  savings
+                </span>
+                <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
+                  Pay per session
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
+                  Credits are deducted only when you run AI conversations, note
+                  extraction, or TTS. Browse and review for free.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+                <span
+                  className="material-symbols-outlined text-[var(--primary)]"
+                  style={{ fontSize: 28 }}
+                >
+                  redeem
+                </span>
+                <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
+                  $5 free to start
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
+                  Every new account gets $5 in starter credits — enough to
+                  explore flashcards, live conversation practice, and note
+                  uploads.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+                <span
+                  className="material-symbols-outlined text-[var(--primary)]"
+                  style={{ fontSize: 28 }}
+                >
+                  no_encryption
+                </span>
+                <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
+                  No lock-in
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
+                  Cancel nothing. There's nothing to cancel. Use Fluō as much or
+                  as little as suits your schedule.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       <section
         id="teachers"
         className="bg-[var(--surface-container-low)] py-16"
@@ -382,10 +522,10 @@ export default function LandingPage() {
       {/* ── Auth Modal ─────────────────────────────── */}
       {showAuth && (
         <div
-          className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-6"
           onClick={() => setShowAuth(false)}
         >
-          <div onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <AuthScreen
               initialMode={authMode}
               onClose={() => setShowAuth(false)}

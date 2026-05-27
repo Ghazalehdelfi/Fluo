@@ -264,6 +264,7 @@ def _find_most_similar_grammar(
 class AuthRegister(BaseModel):
     email: str
     password: str
+    role: str = "student"  # "student" | "teacher"
 
 
 class AuthLogin(BaseModel):
@@ -282,6 +283,8 @@ async def register(body: AuthRegister, db: Session = Depends(get_db)):
             status_code=400, detail="Password must be at least 8 characters"
         )
 
+    role = body.role if body.role in ("student", "teacher") else "student"
+
     exists = db.query(User).filter(User.email == email).first()
     if exists:
         raise HTTPException(status_code=409, detail="Account already exists")
@@ -291,7 +294,7 @@ async def register(body: AuthRegister, db: Session = Depends(get_db)):
         email=email,
         hashed_password=hash_password(body.password),
         credits_balance=welcome_bonus,
-        role="student",
+        role=role,
     )
     db.add(user)
     db.commit()
