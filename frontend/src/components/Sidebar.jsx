@@ -395,7 +395,7 @@ export default function Sidebar() {
               </p>
             ) : (
               <p className="text-[10px] text-[#596060] uppercase tracking-wider">
-                ${credits}
+                {credits} credits
               </p>
             )}
           </div>
