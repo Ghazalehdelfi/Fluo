@@ -46,7 +46,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::111891093958:role/fluo-deploy
+          role-to-assume: arn:aws:iam::779400169222:role/fluo-deploy
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set up Docker Buildx
