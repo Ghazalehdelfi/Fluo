@@ -1,0 +1,69 @@
+name: Renew SSL Certificate
+
+on:
+  schedule:
+    # Every 6 months: Jan 1 and Jul 1 at 03:00 UTC
+    - cron: "0 3 1 1,7 *"
+  workflow_dispatch:
+
+concurrency:
+  group: renew-cert
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate required secrets
+        env:
+          LIGHTSAIL_IP: ${{ secrets.LIGHTSAIL_IP }}
+          LIGHTSAIL_SSH_PRIVATE_KEY: ${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          required=(
+            LIGHTSAIL_IP
+            LIGHTSAIL_SSH_PRIVATE_KEY
+            SSH_USER
+          )
+
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required secret: ${key}"
+              exit 1
+            fi
+          done
+
+      - name: Write SSH key
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          printf "%s" "${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}" > "$HOME/.ssh/lightsail.pem"
+          chmod 600 "$HOME/.ssh/lightsail.pem"
+
+      - name: Renew certificate on server
+        env:
+          LIGHTSAIL_IP: ${{ secrets.LIGHTSAIL_IP }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/lightsail.pem" -o StrictHostKeyChecking=no "${SSH_USER}@${LIGHTSAIL_IP}" '
+            set -euo pipefail
+
+            if ! command -v certbot >/dev/null 2>&1; then
+              echo "certbot is not installed on server"
+              exit 1
+            fi
+
+            sudo certbot renew --quiet
+            sudo systemctl reload nginx || true
+
+            echo "==== certbot certificates ===="
+            sudo certbot certificates || true
+          '
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/lightsail.pem"
