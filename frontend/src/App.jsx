@@ -3,6 +3,7 @@ import { AppContext } from "./context/AppContext";
 import { parsePath, getLanguageSlug } from "./utils.jsx";
 
 import AuthScreen from "./components/AuthScreen.jsx";
+import LandingPage from "./pages/LandingPage.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import LoadingOverlay from "./components/LoadingOverlay.jsx";
 import AddLanguageModal from "./components/modals/AddLanguageModal.jsx";
@@ -64,7 +65,8 @@ export default function App() {
   }
 
   const [practiceGrammarId, setPracticeGrammarId] = useState(null);
-  const [pendingConversationTopic, setPendingConversationTopic] = useState(null);
+  const [pendingConversationTopic, setPendingConversationTopic] =
+    useState(null);
 
   const [showAddLangModal, setShowAddLangModal] = useState(false);
   const [removeLangModal, setRemoveLangModal] = useState({
@@ -79,7 +81,13 @@ export default function App() {
     step: 1,
     homeworkId: null,
     initialLoaded: false,
-    form: { name: "", class_id: "", language_id: "", description: "", due_date: "" },
+    form: {
+      name: "",
+      class_id: "",
+      language_id: "",
+      description: "",
+      due_date: "",
+    },
     attachedVocabIds: [],
     attachedVocabItems: [],
     attachedGrammar: [],
@@ -87,7 +95,9 @@ export default function App() {
     topics: [],
   };
   const [homeworkDraft, setHomeworkDraft] = useState(BLANK_HW_DRAFT);
-  function clearHomeworkDraft() { setHomeworkDraft({ ...BLANK_HW_DRAFT }); }
+  function clearHomeworkDraft() {
+    setHomeworkDraft({ ...BLANK_HW_DRAFT });
+  }
 
   // Keep authTokenRef in sync
   useEffect(() => {
@@ -435,7 +445,7 @@ export default function App() {
   if (!authenticated) {
     return (
       <AppContext.Provider value={contextValue}>
-        <AuthScreen />
+        <LandingPage />
       </AppContext.Provider>
     );
   }
@@ -447,9 +457,11 @@ export default function App() {
     if (page === "teacher-classes") return <TeacherClassesPage />;
     if (page === "teacher-homework") return <TeacherHomeworkPage />;
     if (page === "create-homework") return <CreateHomeworkPage />;
-    if (page === "homework-detail") return <CreateHomeworkPage homeworkId={route.homeworkId} editMode />;
+    if (page === "homework-detail")
+      return <CreateHomeworkPage homeworkId={route.homeworkId} editMode />;
     if (page === "student-homework") return <StudentHomeworkPage />;
-    if (page === "student-homework-detail") return <StudentHomeworkDetailPage homeworkId={route.homeworkId} />;
+    if (page === "student-homework-detail")
+      return <StudentHomeworkDetailPage homeworkId={route.homeworkId} />;
     if (page === "dashboard") return <DashboardPage />;
     if (page === "language") {
       if (section === "notes") return <UploadPage />;

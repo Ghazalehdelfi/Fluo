@@ -272,9 +272,38 @@ class AuthLogin(BaseModel):
 
 
 @app.post("/api/auth/register")
-async def register():
-    """Registration is disabled. Accounts are created by admin only."""
-    raise HTTPException(status_code=403, detail="Registration is currently closed")
+async def register(body: AuthRegister, db: Session = Depends(get_db)):
+    """Create a new account and return a JWT for immediate access."""
+    email = body.email.strip()
+    if len(email) < 3:
+        raise HTTPException(status_code=400, detail="Email/username is too short")
+    if len(body.password) < 8:
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 8 characters"
+        )
+
+    exists = db.query(User).filter(User.email == email).first()
+    if exists:
+        raise HTTPException(status_code=409, detail="Account already exists")
+
+    welcome_bonus = float(os.getenv("WELCOME_BONUS_CREDITS", "5.0"))
+    user = User(
+        email=email,
+        hashed_password=hash_password(body.password),
+        credits_balance=welcome_bonus,
+        role="student",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(user.id, user.email, user.role)
+    return {
+        "token": token,
+        "email": user.email,
+        "credits": user.credits_balance,
+        "role": user.role,
+    }
 
 
 @app.post("/api/auth/login")
@@ -284,7 +313,12 @@ async def login(body: AuthLogin, db: Session = Depends(get_db)):
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = create_access_token(user.id, user.email, user.role)
-    return {"token": token, "email": user.email, "credits": user.credits_balance, "role": user.role}
+    return {
+        "token": token,
+        "email": user.email,
+        "credits": user.credits_balance,
+        "role": user.role,
+    }
 
 
 @app.get("/api/user/me")
@@ -2935,18 +2969,22 @@ class JoinClassBody(BaseModel):
 def _homework_belongs_to_teacher(
     homework_id: int, teacher_id: int, db: Session
 ) -> Homework:
-    hw = db.query(Homework).filter(
-        Homework.id == homework_id, Homework.teacher_id == teacher_id
-    ).first()
+    hw = (
+        db.query(Homework)
+        .filter(Homework.id == homework_id, Homework.teacher_id == teacher_id)
+        .first()
+    )
     if not hw:
         raise HTTPException(status_code=404, detail="Homework not found")
     return hw
 
 
 def _class_belongs_to_teacher(class_id: int, teacher_id: int, db: Session) -> Class:
-    cls = db.query(Class).filter(
-        Class.id == class_id, Class.teacher_id == teacher_id
-    ).first()
+    cls = (
+        db.query(Class)
+        .filter(Class.id == class_id, Class.teacher_id == teacher_id)
+        .first()
+    )
     if not cls:
         raise HTTPException(status_code=404, detail="Class not found")
     return cls
@@ -2963,9 +3001,11 @@ async def create_class(
 ):
     # Verify language belongs to teacher if provided
     if body.language_id:
-        lang = db.query(Language).filter(
-            Language.id == body.language_id, Language.user_id == teacher.id
-        ).first()
+        lang = (
+            db.query(Language)
+            .filter(Language.id == body.language_id, Language.user_id == teacher.id)
+            .first()
+        )
         if not lang:
             raise HTTPException(status_code=404, detail="Language not found")
 
@@ -3000,17 +3040,19 @@ async def list_classes(
     classes = db.query(Class).filter(Class.teacher_id == teacher.id).all()
     result = []
     for cls in classes:
-        student_count = db.query(ClassStudent).filter(
-            ClassStudent.class_id == cls.id
-        ).count()
-        result.append({
-            "id": cls.id,
-            "name": cls.name,
-            "class_code": cls.class_code,
-            "language_id": cls.language_id,
-            "student_count": student_count,
-            "created_at": cls.created_at.isoformat(),
-        })
+        student_count = (
+            db.query(ClassStudent).filter(ClassStudent.class_id == cls.id).count()
+        )
+        result.append(
+            {
+                "id": cls.id,
+                "name": cls.name,
+                "class_code": cls.class_code,
+                "language_id": cls.language_id,
+                "student_count": student_count,
+                "created_at": cls.created_at.isoformat(),
+            }
+        )
     return result
 
 
@@ -3021,16 +3063,20 @@ async def get_class(
     db: Session = Depends(get_db),
 ):
     cls = _class_belongs_to_teacher(class_id, teacher.id, db)
-    student_rows = db.query(ClassStudent).filter(ClassStudent.class_id == class_id).all()
+    student_rows = (
+        db.query(ClassStudent).filter(ClassStudent.class_id == class_id).all()
+    )
     students = []
     for row in student_rows:
         student = db.query(User).filter(User.id == row.student_id).first()
         if student:
-            students.append({
-                "id": student.id,
-                "email": student.email,
-                "joined_at": row.joined_at.isoformat(),
-            })
+            students.append(
+                {
+                    "id": student.id,
+                    "email": student.email,
+                    "joined_at": row.joined_at.isoformat(),
+                }
+            )
     homework_list = db.query(Homework).filter(Homework.class_id == class_id).all()
     return {
         "id": cls.id,
@@ -3062,9 +3108,13 @@ async def add_student_to_class(
         raise HTTPException(status_code=404, detail="No user found with that email")
     if student.role != "student":
         raise HTTPException(status_code=400, detail="That user is not a student")
-    existing = db.query(ClassStudent).filter(
-        ClassStudent.class_id == class_id, ClassStudent.student_id == student.id
-    ).first()
+    existing = (
+        db.query(ClassStudent)
+        .filter(
+            ClassStudent.class_id == class_id, ClassStudent.student_id == student.id
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=400, detail="Student already in this class")
     db.add(ClassStudent(class_id=class_id, student_id=student.id))
@@ -3080,9 +3130,13 @@ async def remove_student_from_class(
     db: Session = Depends(get_db),
 ):
     _class_belongs_to_teacher(class_id, teacher.id, db)
-    row = db.query(ClassStudent).filter(
-        ClassStudent.class_id == class_id, ClassStudent.student_id == student_id
-    ).first()
+    row = (
+        db.query(ClassStudent)
+        .filter(
+            ClassStudent.class_id == class_id, ClassStudent.student_id == student_id
+        )
+        .first()
+    )
     if not row:
         raise HTTPException(status_code=404, detail="Student not in this class")
     db.delete(row)
@@ -3100,14 +3154,20 @@ async def join_class(
     cls = db.query(Class).filter(Class.class_code == body.class_code.upper()).first()
     if not cls:
         raise HTTPException(status_code=404, detail="Invalid class code")
-    existing = db.query(ClassStudent).filter(
-        ClassStudent.class_id == cls.id, ClassStudent.student_id == user.id
-    ).first()
+    existing = (
+        db.query(ClassStudent)
+        .filter(ClassStudent.class_id == cls.id, ClassStudent.student_id == user.id)
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=400, detail="Already enrolled in this class")
     db.add(ClassStudent(class_id=cls.id, student_id=user.id))
     db.commit()
-    return {"message": f"Joined class '{cls.name}'", "class_id": cls.id, "class_name": cls.name}
+    return {
+        "message": f"Joined class '{cls.name}'",
+        "class_id": cls.id,
+        "class_name": cls.name,
+    }
 
 
 # ── Homework CRUD (teacher) ──────────────────────────────────────
@@ -3125,7 +3185,9 @@ async def create_homework(
         try:
             due = datetime.fromisoformat(body.due_date)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid due_date format (use ISO 8601)")
+            raise HTTPException(
+                status_code=400, detail="Invalid due_date format (use ISO 8601)"
+            )
     hw = Homework(
         class_id=body.class_id,
         teacher_id=teacher.id,
@@ -3156,22 +3218,34 @@ async def list_homework(
     result = []
     for hw in hws:
         cls = db.query(Class).filter(Class.id == hw.class_id).first()
-        vocab_count = db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == hw.id).count()
-        grammar_count = db.query(HomeworkGrammarRef).filter(HomeworkGrammarRef.homework_id == hw.id).count()
-        topic_count = db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == hw.id).count()
-        result.append({
-            "id": hw.id,
-            "name": hw.name,
-            "description": hw.description,
-            "class_id": hw.class_id,
-            "class_name": cls.name if cls else None,
-            "language_id": hw.language_id,
-            "due_date": hw.due_date.isoformat() if hw.due_date else None,
-            "created_at": hw.created_at.isoformat(),
-            "vocab_count": vocab_count,
-            "grammar_count": grammar_count,
-            "topic_count": topic_count,
-        })
+        vocab_count = (
+            db.query(HomeworkVocabRef)
+            .filter(HomeworkVocabRef.homework_id == hw.id)
+            .count()
+        )
+        grammar_count = (
+            db.query(HomeworkGrammarRef)
+            .filter(HomeworkGrammarRef.homework_id == hw.id)
+            .count()
+        )
+        topic_count = (
+            db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == hw.id).count()
+        )
+        result.append(
+            {
+                "id": hw.id,
+                "name": hw.name,
+                "description": hw.description,
+                "class_id": hw.class_id,
+                "class_name": cls.name if cls else None,
+                "language_id": hw.language_id,
+                "due_date": hw.due_date.isoformat() if hw.due_date else None,
+                "created_at": hw.created_at.isoformat(),
+                "vocab_count": vocab_count,
+                "grammar_count": grammar_count,
+                "topic_count": topic_count,
+            }
+        )
     return result
 
 
@@ -3185,66 +3259,85 @@ async def get_homework(
     cls = db.query(Class).filter(Class.id == hw.class_id).first()
 
     # Vocab items (from teacher's own vocabulary table)
-    vocab_refs = db.query(HomeworkVocabRef).filter(
-        HomeworkVocabRef.homework_id == homework_id
-    ).all()
+    vocab_refs = (
+        db.query(HomeworkVocabRef)
+        .filter(HomeworkVocabRef.homework_id == homework_id)
+        .all()
+    )
     vocab_items = []
     for ref in vocab_refs:
         v = db.query(Vocabulary).filter(Vocabulary.id == ref.vocabulary_id).first()
         if v:
-            vocab_items.append({
-                "id": v.id,
-                "target_word": v.target_word,
-                "native_translation": v.native_translation,
-                "example_sentence": v.example_sentence,
-                "fluency_level": v.fluency_level,
-            })
+            vocab_items.append(
+                {
+                    "id": v.id,
+                    "target_word": v.target_word,
+                    "native_translation": v.native_translation,
+                    "example_sentence": v.example_sentence,
+                    "fluency_level": v.fluency_level,
+                }
+            )
 
     # Grammar items
-    grammar_refs = db.query(HomeworkGrammarRef).filter(
-        HomeworkGrammarRef.homework_id == homework_id
-    ).all()
+    grammar_refs = (
+        db.query(HomeworkGrammarRef)
+        .filter(HomeworkGrammarRef.homework_id == homework_id)
+        .all()
+    )
     grammar_items = []
     for ref in grammar_refs:
         g = db.query(Grammar).filter(Grammar.id == ref.grammar_id).first()
         if g:
             # Get saved questions for this grammar concept within this homework
-            questions = db.query(HomeworkGrammarQuestion).filter(
-                HomeworkGrammarQuestion.homework_id == homework_id,
-                HomeworkGrammarQuestion.grammar_id == ref.grammar_id,
-            ).order_by(HomeworkGrammarQuestion.order_index).all()
-            grammar_items.append({
-                "id": g.id,
-                "concept_name": g.concept_name,
-                "description": g.description,
-                "examples": g.examples,
-                "fluency_level": g.fluency_level,
-                "questions_saved": len(questions),
-                "questions": [
-                    {
-                        "id": q.id,
-                        "question_type": q.question_type,
-                        "question_text": q.question_text,
-                        "english_prompt": q.english_prompt,
-                        "wrong_sentence": q.wrong_sentence,
-                        "correct_answer": q.correct_answer,
-                        "explanation": q.explanation,
-                        "highlighted_segments": json.loads(q.highlighted_segments) if q.highlighted_segments else [],
-                        "order_index": q.order_index,
-                    }
-                    for q in questions
-                ],
-            })
+            questions = (
+                db.query(HomeworkGrammarQuestion)
+                .filter(
+                    HomeworkGrammarQuestion.homework_id == homework_id,
+                    HomeworkGrammarQuestion.grammar_id == ref.grammar_id,
+                )
+                .order_by(HomeworkGrammarQuestion.order_index)
+                .all()
+            )
+            grammar_items.append(
+                {
+                    "id": g.id,
+                    "concept_name": g.concept_name,
+                    "description": g.description,
+                    "examples": g.examples,
+                    "fluency_level": g.fluency_level,
+                    "questions_saved": len(questions),
+                    "questions": [
+                        {
+                            "id": q.id,
+                            "question_type": q.question_type,
+                            "question_text": q.question_text,
+                            "english_prompt": q.english_prompt,
+                            "wrong_sentence": q.wrong_sentence,
+                            "correct_answer": q.correct_answer,
+                            "explanation": q.explanation,
+                            "highlighted_segments": (
+                                json.loads(q.highlighted_segments)
+                                if q.highlighted_segments
+                                else []
+                            ),
+                            "order_index": q.order_index,
+                        }
+                        for q in questions
+                    ],
+                }
+            )
 
     # Topics
-    topics = db.query(HomeworkTopic).filter(
-        HomeworkTopic.homework_id == homework_id
-    ).all()
+    topics = (
+        db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == homework_id).all()
+    )
 
     # Completions summary
-    completions = db.query(HomeworkCompletion).filter(
-        HomeworkCompletion.homework_id == homework_id
-    ).all()
+    completions = (
+        db.query(HomeworkCompletion)
+        .filter(HomeworkCompletion.homework_id == homework_id)
+        .all()
+    )
     completion_summary = {}
     for c in completions:
         key = c.exercise_type
@@ -3326,15 +3419,21 @@ async def add_vocab_refs(
         vocab = db.query(Vocabulary).filter(Vocabulary.id == vid).first()
         if not vocab:
             continue
-        lang = db.query(Language).filter(
-            Language.id == vocab.language_id, Language.user_id == teacher.id
-        ).first()
+        lang = (
+            db.query(Language)
+            .filter(Language.id == vocab.language_id, Language.user_id == teacher.id)
+            .first()
+        )
         if not lang:
             continue
-        existing = db.query(HomeworkVocabRef).filter(
-            HomeworkVocabRef.homework_id == homework_id,
-            HomeworkVocabRef.vocabulary_id == vid,
-        ).first()
+        existing = (
+            db.query(HomeworkVocabRef)
+            .filter(
+                HomeworkVocabRef.homework_id == homework_id,
+                HomeworkVocabRef.vocabulary_id == vid,
+            )
+            .first()
+        )
         if not existing:
             db.add(HomeworkVocabRef(homework_id=homework_id, vocabulary_id=vid))
             added += 1
@@ -3350,10 +3449,14 @@ async def remove_vocab_ref(
     db: Session = Depends(get_db),
 ):
     _homework_belongs_to_teacher(homework_id, teacher.id, db)
-    row = db.query(HomeworkVocabRef).filter(
-        HomeworkVocabRef.homework_id == homework_id,
-        HomeworkVocabRef.vocabulary_id == vocab_id,
-    ).first()
+    row = (
+        db.query(HomeworkVocabRef)
+        .filter(
+            HomeworkVocabRef.homework_id == homework_id,
+            HomeworkVocabRef.vocabulary_id == vocab_id,
+        )
+        .first()
+    )
     if not row:
         raise HTTPException(status_code=404, detail="Vocab ref not found")
     db.delete(row)
@@ -3374,15 +3477,21 @@ async def add_grammar_refs(
         grammar = db.query(Grammar).filter(Grammar.id == gid).first()
         if not grammar:
             continue
-        lang = db.query(Language).filter(
-            Language.id == grammar.language_id, Language.user_id == teacher.id
-        ).first()
+        lang = (
+            db.query(Language)
+            .filter(Language.id == grammar.language_id, Language.user_id == teacher.id)
+            .first()
+        )
         if not lang:
             continue
-        existing = db.query(HomeworkGrammarRef).filter(
-            HomeworkGrammarRef.homework_id == homework_id,
-            HomeworkGrammarRef.grammar_id == gid,
-        ).first()
+        existing = (
+            db.query(HomeworkGrammarRef)
+            .filter(
+                HomeworkGrammarRef.homework_id == homework_id,
+                HomeworkGrammarRef.grammar_id == gid,
+            )
+            .first()
+        )
         if not existing:
             db.add(HomeworkGrammarRef(homework_id=homework_id, grammar_id=gid))
             added += 1
@@ -3398,10 +3507,14 @@ async def remove_grammar_ref(
     db: Session = Depends(get_db),
 ):
     _homework_belongs_to_teacher(homework_id, teacher.id, db)
-    row = db.query(HomeworkGrammarRef).filter(
-        HomeworkGrammarRef.homework_id == homework_id,
-        HomeworkGrammarRef.grammar_id == grammar_id,
-    ).first()
+    row = (
+        db.query(HomeworkGrammarRef)
+        .filter(
+            HomeworkGrammarRef.homework_id == homework_id,
+            HomeworkGrammarRef.grammar_id == grammar_id,
+        )
+        .first()
+    )
     if not row:
         raise HTTPException(status_code=404, detail="Grammar ref not found")
     db.delete(row)
@@ -3425,12 +3538,18 @@ async def generate_homework_questions(
     _homework_belongs_to_teacher(homework_id, teacher.id, db)
 
     # Verify grammar ref exists
-    ref = db.query(HomeworkGrammarRef).filter(
-        HomeworkGrammarRef.homework_id == homework_id,
-        HomeworkGrammarRef.grammar_id == grammar_id,
-    ).first()
+    ref = (
+        db.query(HomeworkGrammarRef)
+        .filter(
+            HomeworkGrammarRef.homework_id == homework_id,
+            HomeworkGrammarRef.grammar_id == grammar_id,
+        )
+        .first()
+    )
     if not ref:
-        raise HTTPException(status_code=404, detail="Grammar concept not attached to this homework")
+        raise HTTPException(
+            status_code=404, detail="Grammar concept not attached to this homework"
+        )
 
     grammar = db.query(Grammar).filter(Grammar.id == grammar_id).first()
     if not grammar:
@@ -3494,10 +3613,16 @@ Learner level: {user_level}"""
             db.commit()
         except json.JSONDecodeError:
             # Fall back to a minimal card so question generation can still proceed
-            grammar.detail_card = json.dumps({"concept": grammar.concept_name, "description": grammar.description or ""})
+            grammar.detail_card = json.dumps(
+                {
+                    "concept": grammar.concept_name,
+                    "description": grammar.description or "",
+                }
+            )
             db.commit()
 
     from openai import OpenAI as _OpenAI
+
     client = _OpenAI(api_key=api_key)
     agent = GrammarPracticeAgent(
         client,
@@ -3510,7 +3635,10 @@ Learner level: {user_level}"""
     try:
         detail_card = json.loads(grammar.detail_card)
     except (json.JSONDecodeError, ValueError):
-        detail_card = {"concept": grammar.concept_name, "description": grammar.description}
+        detail_card = {
+            "concept": grammar.concept_name,
+            "description": grammar.description,
+        }
 
     questions = agent.generate_questions(detail_card)
     # Normalise field names and add order_index
@@ -3533,12 +3661,18 @@ async def save_homework_questions(
     """Save teacher-refined questions for a grammar concept within a homework."""
     _homework_belongs_to_teacher(homework_id, teacher.id, db)
     # Verify ref exists
-    ref = db.query(HomeworkGrammarRef).filter(
-        HomeworkGrammarRef.homework_id == homework_id,
-        HomeworkGrammarRef.grammar_id == grammar_id,
-    ).first()
+    ref = (
+        db.query(HomeworkGrammarRef)
+        .filter(
+            HomeworkGrammarRef.homework_id == homework_id,
+            HomeworkGrammarRef.grammar_id == grammar_id,
+        )
+        .first()
+    )
     if not ref:
-        raise HTTPException(status_code=404, detail="Grammar concept not attached to this homework")
+        raise HTTPException(
+            status_code=404, detail="Grammar concept not attached to this homework"
+        )
 
     # Delete existing questions for this concept in this homework
     db.query(HomeworkGrammarQuestion).filter(
@@ -3547,18 +3681,20 @@ async def save_homework_questions(
     ).delete()
 
     for item in body.questions:
-        db.add(HomeworkGrammarQuestion(
-            homework_id=homework_id,
-            grammar_id=grammar_id,
-            question_type=item.question_type,
-            question_text=item.question_text,
-            english_prompt=item.english_prompt,
-            wrong_sentence=item.wrong_sentence,
-            correct_answer=item.correct_answer,
-            explanation=item.explanation,
-            highlighted_segments=item.highlighted_segments,
-            order_index=item.order_index,
-        ))
+        db.add(
+            HomeworkGrammarQuestion(
+                homework_id=homework_id,
+                grammar_id=grammar_id,
+                question_type=item.question_type,
+                question_text=item.question_text,
+                english_prompt=item.english_prompt,
+                wrong_sentence=item.wrong_sentence,
+                correct_answer=item.correct_answer,
+                explanation=item.explanation,
+                highlighted_segments=item.highlighted_segments,
+                order_index=item.order_index,
+            )
+        )
     db.commit()
     return {"message": f"{len(body.questions)} question(s) saved"}
 
@@ -3591,9 +3727,11 @@ async def remove_homework_topic(
     db: Session = Depends(get_db),
 ):
     _homework_belongs_to_teacher(homework_id, teacher.id, db)
-    topic = db.query(HomeworkTopic).filter(
-        HomeworkTopic.id == topic_id, HomeworkTopic.homework_id == homework_id
-    ).first()
+    topic = (
+        db.query(HomeworkTopic)
+        .filter(HomeworkTopic.id == topic_id, HomeworkTopic.homework_id == homework_id)
+        .first()
+    )
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
     db.delete(topic)
@@ -3610,23 +3748,37 @@ async def get_homework_completions(
     """Get per-student completion status for a homework (teacher monitoring)."""
     hw = _homework_belongs_to_teacher(homework_id, teacher.id, db)
     cls = db.query(Class).filter(Class.id == hw.class_id).first()
-    student_rows = db.query(ClassStudent).filter(ClassStudent.class_id == hw.class_id).all()
+    student_rows = (
+        db.query(ClassStudent).filter(ClassStudent.class_id == hw.class_id).all()
+    )
 
     result = []
     for row in student_rows:
         student = db.query(User).filter(User.id == row.student_id).first()
         if not student:
             continue
-        completions = db.query(HomeworkCompletion).filter(
-            HomeworkCompletion.homework_id == homework_id,
-            HomeworkCompletion.student_id == student.id,
-        ).all()
-        completion_map = {c.exercise_type: {"score": c.score, "completed_at": c.completed_at.isoformat()} for c in completions}
-        result.append({
-            "student_id": student.id,
-            "student_email": student.email,
-            "completions": completion_map,
-        })
+        completions = (
+            db.query(HomeworkCompletion)
+            .filter(
+                HomeworkCompletion.homework_id == homework_id,
+                HomeworkCompletion.student_id == student.id,
+            )
+            .all()
+        )
+        completion_map = {
+            c.exercise_type: {
+                "score": c.score,
+                "completed_at": c.completed_at.isoformat(),
+            }
+            for c in completions
+        }
+        result.append(
+            {
+                "student_id": student.id,
+                "student_email": student.email,
+                "completions": completion_map,
+            }
+        )
     return {"homework_name": hw.name, "students": result}
 
 
@@ -3639,7 +3791,9 @@ async def list_student_homework(
     db: Session = Depends(get_db),
 ):
     """List all homework assigned to the student via their class enrollments."""
-    enrollments = db.query(ClassStudent).filter(ClassStudent.student_id == user.id).all()
+    enrollments = (
+        db.query(ClassStudent).filter(ClassStudent.student_id == user.id).all()
+    )
     result = []
     for enrollment in enrollments:
         cls = db.query(Class).filter(Class.id == enrollment.class_id).first()
@@ -3647,29 +3801,47 @@ async def list_student_homework(
             continue
         homework_list = db.query(Homework).filter(Homework.class_id == cls.id).all()
         for hw in homework_list:
-            completions = db.query(HomeworkCompletion).filter(
-                HomeworkCompletion.homework_id == hw.id,
-                HomeworkCompletion.student_id == user.id,
-            ).all()
+            completions = (
+                db.query(HomeworkCompletion)
+                .filter(
+                    HomeworkCompletion.homework_id == hw.id,
+                    HomeworkCompletion.student_id == user.id,
+                )
+                .all()
+            )
             completion_map = {c.exercise_type: True for c in completions}
 
-            vocab_count = db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == hw.id).count()
-            grammar_count = db.query(HomeworkGrammarRef).filter(HomeworkGrammarRef.homework_id == hw.id).count()
-            topic_count = db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == hw.id).count()
+            vocab_count = (
+                db.query(HomeworkVocabRef)
+                .filter(HomeworkVocabRef.homework_id == hw.id)
+                .count()
+            )
+            grammar_count = (
+                db.query(HomeworkGrammarRef)
+                .filter(HomeworkGrammarRef.homework_id == hw.id)
+                .count()
+            )
+            topic_count = (
+                db.query(HomeworkTopic)
+                .filter(HomeworkTopic.homework_id == hw.id)
+                .count()
+            )
 
-            result.append({
-                "id": hw.id,
-                "name": hw.name,
-                "description": hw.description,
-                "class_name": cls.name,
-                "language_id": hw.language_id,
-                "due_date": hw.due_date.isoformat() if hw.due_date else None,
-                "created_at": hw.created_at.isoformat(),
-                "vocab_count": vocab_count,
-                "grammar_count": grammar_count,
-                "topic_count": topic_count,
-                "completions": completion_map,
-            })
+            result.append(
+                {
+                    "id": hw.id,
+                    "name": hw.name,
+                    "description": hw.description,
+                    "class_name": cls.name,
+                    "language_id": hw.language_id,
+                    "due_date": hw.due_date.isoformat() if hw.due_date else None,
+                    "created_at": hw.created_at.isoformat(),
+                    "vocab_count": vocab_count,
+                    "grammar_count": grammar_count,
+                    "topic_count": topic_count,
+                    "completions": completion_map,
+                }
+            )
     return result
 
 
@@ -3684,66 +3856,97 @@ async def get_student_homework_detail(
     if not hw:
         raise HTTPException(status_code=404, detail="Homework not found")
     # Verify student is enrolled in the class
-    enrollment = db.query(ClassStudent).filter(
-        ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
-    ).first()
+    enrollment = (
+        db.query(ClassStudent)
+        .filter(
+            ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
+        )
+        .first()
+    )
     if not enrollment:
         raise HTTPException(status_code=403, detail="Not enrolled in this class")
 
     cls = db.query(Class).filter(Class.id == hw.class_id).first()
 
     # Vocab (teacher's vocabulary rows)
-    vocab_refs = db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == homework_id).all()
+    vocab_refs = (
+        db.query(HomeworkVocabRef)
+        .filter(HomeworkVocabRef.homework_id == homework_id)
+        .all()
+    )
     vocab_items = []
     for ref in vocab_refs:
         v = db.query(Vocabulary).filter(Vocabulary.id == ref.vocabulary_id).first()
         if v:
-            vocab_items.append({
-                "id": v.id,
-                "target_word": v.target_word,
-                "native_translation": v.native_translation,
-                "example_sentence": v.example_sentence,
-            })
+            vocab_items.append(
+                {
+                    "id": v.id,
+                    "target_word": v.target_word,
+                    "native_translation": v.native_translation,
+                    "example_sentence": v.example_sentence,
+                }
+            )
 
     # Grammar (teacher's grammar rows + saved questions)
-    grammar_refs = db.query(HomeworkGrammarRef).filter(HomeworkGrammarRef.homework_id == homework_id).all()
+    grammar_refs = (
+        db.query(HomeworkGrammarRef)
+        .filter(HomeworkGrammarRef.homework_id == homework_id)
+        .all()
+    )
     grammar_items = []
     for ref in grammar_refs:
         g = db.query(Grammar).filter(Grammar.id == ref.grammar_id).first()
         if g:
-            questions = db.query(HomeworkGrammarQuestion).filter(
-                HomeworkGrammarQuestion.homework_id == homework_id,
-                HomeworkGrammarQuestion.grammar_id == ref.grammar_id,
-            ).order_by(HomeworkGrammarQuestion.order_index).all()
-            grammar_items.append({
-                "id": g.id,
-                "concept_name": g.concept_name,
-                "description": g.description,
-                "questions_count": len(questions),
-                "questions": [
-                    {
-                        "id": q.id,
-                        "question_type": q.question_type,
-                        "question_text": q.question_text,
-                        "english_prompt": q.english_prompt,
-                        "wrong_sentence": q.wrong_sentence,
-                        "correct_answer": q.correct_answer,
-                        "explanation": q.explanation,
-                        "highlighted_segments": json.loads(q.highlighted_segments) if q.highlighted_segments else [],
-                        "order_index": q.order_index,
-                    }
-                    for q in questions
-                ],
-            })
+            questions = (
+                db.query(HomeworkGrammarQuestion)
+                .filter(
+                    HomeworkGrammarQuestion.homework_id == homework_id,
+                    HomeworkGrammarQuestion.grammar_id == ref.grammar_id,
+                )
+                .order_by(HomeworkGrammarQuestion.order_index)
+                .all()
+            )
+            grammar_items.append(
+                {
+                    "id": g.id,
+                    "concept_name": g.concept_name,
+                    "description": g.description,
+                    "questions_count": len(questions),
+                    "questions": [
+                        {
+                            "id": q.id,
+                            "question_type": q.question_type,
+                            "question_text": q.question_text,
+                            "english_prompt": q.english_prompt,
+                            "wrong_sentence": q.wrong_sentence,
+                            "correct_answer": q.correct_answer,
+                            "explanation": q.explanation,
+                            "highlighted_segments": (
+                                json.loads(q.highlighted_segments)
+                                if q.highlighted_segments
+                                else []
+                            ),
+                            "order_index": q.order_index,
+                        }
+                        for q in questions
+                    ],
+                }
+            )
 
     # Topics
-    topics = db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == homework_id).all()
+    topics = (
+        db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == homework_id).all()
+    )
 
     # Student's completions for this homework
-    completions = db.query(HomeworkCompletion).filter(
-        HomeworkCompletion.homework_id == homework_id,
-        HomeworkCompletion.student_id == user.id,
-    ).all()
+    completions = (
+        db.query(HomeworkCompletion)
+        .filter(
+            HomeworkCompletion.homework_id == homework_id,
+            HomeworkCompletion.student_id == user.id,
+        )
+        .all()
+    )
     completion_map = {
         c.exercise_type: {"score": c.score, "completed_at": c.completed_at.isoformat()}
         for c in completions
@@ -3759,8 +3962,7 @@ async def get_student_homework_detail(
         "vocab": vocab_items,
         "grammar": grammar_items,
         "topics": [
-            {"id": t.id, "topic_text": t.topic_text, "source": t.source}
-            for t in topics
+            {"id": t.id, "topic_text": t.topic_text, "source": t.source} for t in topics
         ],
         "completions": completion_map,
     }
@@ -3779,25 +3981,33 @@ async def student_start_flashcards(
     hw = db.query(Homework).filter(Homework.id == homework_id).first()
     if not hw:
         raise HTTPException(status_code=404, detail="Homework not found")
-    enrollment = db.query(ClassStudent).filter(
-        ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
-    ).first()
+    enrollment = (
+        db.query(ClassStudent)
+        .filter(
+            ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
+        )
+        .first()
+    )
     if not enrollment:
         raise HTTPException(status_code=403, detail="Not enrolled in this class")
     if not hw.language_id:
         raise HTTPException(status_code=400, detail="Homework has no language set")
 
     # Ensure student has this language in their account
-    student_lang = db.query(Language).filter(
-        Language.user_id == user.id, Language.id == hw.language_id
-    ).first()
+    student_lang = (
+        db.query(Language)
+        .filter(Language.user_id == user.id, Language.id == hw.language_id)
+        .first()
+    )
     if not student_lang:
         # Try to find by name
         teacher_lang = db.query(Language).filter(Language.id == hw.language_id).first()
         if teacher_lang:
-            student_lang = db.query(Language).filter(
-                Language.user_id == user.id, Language.name == teacher_lang.name
-            ).first()
+            student_lang = (
+                db.query(Language)
+                .filter(Language.user_id == user.id, Language.name == teacher_lang.name)
+                .first()
+            )
             if not student_lang:
                 student_lang = Language(
                     user_id=user.id,
@@ -3808,19 +4018,31 @@ async def student_start_flashcards(
                 db.flush()
 
     if not student_lang:
-        raise HTTPException(status_code=400, detail="Could not determine student language")
+        raise HTTPException(
+            status_code=400, detail="Could not determine student language"
+        )
 
-    vocab_refs = db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == homework_id).all()
+    vocab_refs = (
+        db.query(HomeworkVocabRef)
+        .filter(HomeworkVocabRef.homework_id == homework_id)
+        .all()
+    )
     deck = []
     for ref in vocab_refs:
-        teacher_vocab = db.query(Vocabulary).filter(Vocabulary.id == ref.vocabulary_id).first()
+        teacher_vocab = (
+            db.query(Vocabulary).filter(Vocabulary.id == ref.vocabulary_id).first()
+        )
         if not teacher_vocab:
             continue
         # Skip duplicates by target_word (case-insensitive) within student's language
-        existing = db.query(Vocabulary).filter(
-            Vocabulary.language_id == student_lang.id,
-            Vocabulary.target_word.ilike(teacher_vocab.target_word),
-        ).first()
+        existing = (
+            db.query(Vocabulary)
+            .filter(
+                Vocabulary.language_id == student_lang.id,
+                Vocabulary.target_word.ilike(teacher_vocab.target_word),
+            )
+            .first()
+        )
         if not existing:
             new_vocab = Vocabulary(
                 language_id=student_lang.id,
@@ -3831,21 +4053,25 @@ async def student_start_flashcards(
             )
             db.add(new_vocab)
             db.flush()
-            deck.append({
-                "id": new_vocab.id,
-                "target_word": new_vocab.target_word,
-                "native_translation": new_vocab.native_translation,
-                "example_sentence": new_vocab.example_sentence,
-                "fluency_level": new_vocab.fluency_level,
-            })
+            deck.append(
+                {
+                    "id": new_vocab.id,
+                    "target_word": new_vocab.target_word,
+                    "native_translation": new_vocab.native_translation,
+                    "example_sentence": new_vocab.example_sentence,
+                    "fluency_level": new_vocab.fluency_level,
+                }
+            )
         else:
-            deck.append({
-                "id": existing.id,
-                "target_word": existing.target_word,
-                "native_translation": existing.native_translation,
-                "example_sentence": existing.example_sentence,
-                "fluency_level": existing.fluency_level,
-            })
+            deck.append(
+                {
+                    "id": existing.id,
+                    "target_word": existing.target_word,
+                    "native_translation": existing.native_translation,
+                    "example_sentence": existing.example_sentence,
+                    "fluency_level": existing.fluency_level,
+                }
+            )
     db.commit()
     return {"deck": deck, "language_id": student_lang.id}
 
@@ -3861,37 +4087,50 @@ async def student_complete_exercise(
     hw = db.query(Homework).filter(Homework.id == homework_id).first()
     if not hw:
         raise HTTPException(status_code=404, detail="Homework not found")
-    enrollment = db.query(ClassStudent).filter(
-        ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
-    ).first()
+    enrollment = (
+        db.query(ClassStudent)
+        .filter(
+            ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
+        )
+        .first()
+    )
     if not enrollment:
         raise HTTPException(status_code=403, detail="Not enrolled in this class")
 
     valid_types = {"flashcards", "grammar", "conversation"}
     if body.exercise_type not in valid_types:
-        raise HTTPException(status_code=400, detail=f"exercise_type must be one of {valid_types}")
+        raise HTTPException(
+            status_code=400, detail=f"exercise_type must be one of {valid_types}"
+        )
 
-    existing = db.query(HomeworkCompletion).filter(
-        HomeworkCompletion.student_id == user.id,
-        HomeworkCompletion.homework_id == homework_id,
-        HomeworkCompletion.exercise_type == body.exercise_type,
-    ).first()
+    existing = (
+        db.query(HomeworkCompletion)
+        .filter(
+            HomeworkCompletion.student_id == user.id,
+            HomeworkCompletion.homework_id == homework_id,
+            HomeworkCompletion.exercise_type == body.exercise_type,
+        )
+        .first()
+    )
     if existing:
         existing.score = body.score
         existing.completed_at = datetime.utcnow()
     else:
-        db.add(HomeworkCompletion(
-            student_id=user.id,
-            homework_id=homework_id,
-            exercise_type=body.exercise_type,
-            score=body.score,
-        ))
+        db.add(
+            HomeworkCompletion(
+                student_id=user.id,
+                homework_id=homework_id,
+                exercise_type=body.exercise_type,
+                score=body.score,
+            )
+        )
     db.commit()
     return {"message": f"{body.exercise_type} marked as complete"}
 
 
 # ============== Serve Frontend ==============
 # Must be registered AFTER all API routes so the catch-all doesn't shadow them.
+
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
