@@ -115,9 +115,6 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 
-# Cached Stripe Price ID — resolved lazily by ensure_stripe_price()
-_stripe_price_id: Optional[str] = os.getenv("STRIPE_PRICE_ID", "") or None
-
 
 def get_db():
     db = SessionLocal()
@@ -2692,45 +2689,11 @@ async def placement_test_save_content(
 
 # ── Stripe helpers ──────────────────────────────────────────────
 
-CREDIT_PACK_NAME = "Fluō Credit Pack"
-CREDIT_PACK_AMOUNT_CENTS = 2000  # $20.00 per pack
-CREDIT_PACK_CREDITS = 20.0  # credits added per purchase
-
-
-def ensure_stripe_price() -> str:
-    """Ensure a Stripe Product + Price exist for the credit pack.
-
-    Looks up the cached/env value first, then searches Stripe for an existing
-    product named *CREDIT_PACK_NAME*, and finally creates a new product+price
-    if nothing is found.  Returns the Price ID.
-    """
-    global _stripe_price_id
-    if _stripe_price_id:
-        return _stripe_price_id
-
-    # Search for an existing product by name
-    products = stripe.Product.list(limit=100, active=True)
-    for product in products.data:
-        if product.name == CREDIT_PACK_NAME and product.default_price:
-            _stripe_price_id = (
-                product.default_price
-                if isinstance(product.default_price, str)
-                else product.default_price.id
-            )
-            logger.info(f"Stripe: reusing existing price {_stripe_price_id}")
-            return _stripe_price_id
-
-    # Nothing found — create product with an embedded price
-    product = stripe.Product.create(
-        name=CREDIT_PACK_NAME,
-        default_price_data={
-            "currency": "usd",
-            "unit_amount": CREDIT_PACK_AMOUNT_CENTS,
-        },
-    )
-    _stripe_price_id = product.default_price  # type: ignore[assignment]
-    logger.info(f"Stripe: created product {product.id} with price {_stripe_price_id}")
-    return _stripe_price_id
+CREDIT_PACKS = {
+    "5":  {"amount_cents": 500,  "credits": 5.0},
+    "10": {"amount_cents": 1000, "credits": 10.0},
+    "20": {"amount_cents": 2000, "credits": 20.0},
+}
 
 
 def get_or_create_stripe_customer(user: User, db: Session) -> str:
@@ -2754,6 +2717,7 @@ def get_or_create_stripe_customer(user: User, db: Session) -> str:
 class CheckoutRequest(BaseModel):
     success_url: Optional[str] = None
     cancel_url: Optional[str] = None
+    pack: str = "20"  # "5", "10", or "20"
 
 
 @app.post("/api/billing/create-checkout-session")
@@ -2767,8 +2731,11 @@ async def create_checkout_session(
     if not stripe.api_key:
         raise HTTPException(status_code=500, detail="Stripe is not configured")
 
+    pack = CREDIT_PACKS.get(body.pack)
+    if not pack:
+        raise HTTPException(status_code=400, detail=f"Invalid pack. Choose one of: {', '.join(CREDIT_PACKS)}")
+
     try:
-        price_id = ensure_stripe_price()
         customer_id = get_or_create_stripe_customer(user, db)
 
         # Derive sensible default URLs from the incoming request
@@ -2780,7 +2747,13 @@ async def create_checkout_session(
             customer=customer_id,
             line_items=[
                 {
-                    "price": price_id,
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": pack["amount_cents"],
+                        "product_data": {
+                            "name": f"Fluō Credit Pack — ${body.pack}",
+                        },
+                    },
                     "quantity": 1,
                 }
             ],
@@ -2790,7 +2763,7 @@ async def create_checkout_session(
             client_reference_id=str(user.id),
             metadata={
                 "user_id": str(user.id),
-                "credits": str(CREDIT_PACK_CREDITS),
+                "credits": str(pack["credits"]),
             },
         )
         return {"checkout_url": session.url}

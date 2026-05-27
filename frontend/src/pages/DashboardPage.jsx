@@ -87,12 +87,13 @@ export default function DashboardPage() {
     }
   }
 
-  async function buyCredits() {
+  async function buyCredits(pack) {
     try {
       const resp = await apiFetch("/api/billing/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          pack,
           success_url: window.location.origin + "/?purchase=success",
           cancel_url: window.location.origin + "/?purchase=cancel",
         }),
@@ -238,17 +239,27 @@ export default function DashboardPage() {
                 ${(dashData.credits || 0).toFixed(2)}
               </div>
             </div>
-            <div className="mt-6" style={{ position: "relative", zIndex: 10 }}>
-              <button
-                onClick={buyCredits}
-                className="py-3 px-6 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95"
-                style={{
-                  background: "var(--on-primary)",
-                  color: "var(--primary)",
-                }}
-              >
-                Add Credits
-              </button>
+            <div
+              className="mt-6 flex gap-2 flex-wrap"
+              style={{ position: "relative", zIndex: 10 }}
+            >
+              {[
+                ["5", "$5"],
+                ["10", "$10"],
+                ["20", "$20"],
+              ].map(([pack, label]) => (
+                <button
+                  key={pack}
+                  onClick={() => buyCredits(pack)}
+                  className="py-2 px-4 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95"
+                  style={{
+                    background: "var(--on-primary)",
+                    color: "var(--primary)",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             <div
               style={{

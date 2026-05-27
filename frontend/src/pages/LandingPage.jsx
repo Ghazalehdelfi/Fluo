@@ -513,6 +513,31 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Contact ────────────────────────────────── */}
+      <section className="border-t border-[rgba(172,179,178,0.2)] px-5 py-14 md:px-10">
+        <div className="mx-auto max-w-xl text-center">
+          <h2 className="text-2xl font-black tracking-tight text-[var(--dark)]">
+            Get in touch
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--accent1)]">
+            Questions, feedback, or just want to say hello? We'd love to hear
+            from you.
+          </p>
+          <a
+            href="mailto:fluolearn@gmail.com"
+            className="btn-primary mt-6 inline-flex items-center gap-2 rounded-2xl px-7 py-3.5 text-sm font-semibold"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18 }}
+            >
+              mail
+            </span>
+            fluolearn@gmail.com
+          </a>
+        </div>
+      </section>
+
       {/* ── Footer ─────────────────────────────────── */}
       <footer className="border-t border-[rgba(172,179,178,0.2)] px-5 py-8 text-center text-xs text-[var(--accent1)] md:px-10">
         <span className="font-black text-[var(--dark)]">Fluō</span> · Your

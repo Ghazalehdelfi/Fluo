@@ -86,12 +86,13 @@ export default function UserPanelModal() {
     } catch {}
   }
 
-  async function buyCredits() {
+  async function buyCredits(pack) {
     try {
       const resp = await apiFetch("/api/billing/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          pack,
           success_url: window.location.origin + "/?purchase=success",
           cancel_url: window.location.origin + "/?purchase=cancel",
         }),
@@ -149,12 +150,21 @@ export default function UserPanelModal() {
                   ${credits.toFixed(2)}
                 </div>
               </div>
-              <button
-                onClick={buyCredits}
-                className="btn-primary px-4 py-2 rounded-xl text-sm font-medium"
-              >
-                Buy $20 Pack
-              </button>
+              <div className="flex gap-2">
+                {[
+                  ["5", "$5"],
+                  ["10", "$10"],
+                  ["20", "$20"],
+                ].map(([pack, label]) => (
+                  <button
+                    key={pack}
+                    onClick={() => buyCredits(pack)}
+                    className="btn-primary px-3 py-2 rounded-xl text-sm font-medium"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="p-4 bg-[#f1f4f3] rounded-xl">
               <div className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">

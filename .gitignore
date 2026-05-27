@@ -20,3 +20,5 @@ venv/
 .env
 deploy/*.pem
 *.pem
+
+deploy/upload-secrets.sh
