@@ -46,6 +46,8 @@ jobs:
         env:
           LIGHTSAIL_IP: ${{ secrets.LIGHTSAIL_IP }}
           SSH_USER: ${{ secrets.SSH_USER }}
+          DOMAIN: learnwithfluo.com
+          WWW_DOMAIN: www.learnwithfluo.com
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/lightsail.pem" -o StrictHostKeyChecking=no "${SSH_USER}@${LIGHTSAIL_IP}" '
@@ -55,6 +57,13 @@ jobs:
               echo "certbot is not installed on server"
               exit 1
             fi
+
+            sudo certbot --nginx --non-interactive --agree-tos \
+              --email "admin@'"${DOMAIN}"'" \
+              --cert-name "'"${DOMAIN}"'" \
+              -d "'"${DOMAIN}"'" \
+              -d "'"${WWW_DOMAIN}"'" \
+              --keep-until-expiring --expand
 
             sudo certbot renew --quiet
             sudo systemctl reload nginx || true
