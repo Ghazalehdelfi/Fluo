@@ -10,6 +10,8 @@ set -euo pipefail
 LIGHTSAIL_IP="${LIGHTSAIL_IP:-99.79.22.33}"
 SSH_KEY="${SSH_KEY:-./LightsailDefaultKey-ca-central-1.pem}"
 SSH_USER="${SSH_USER:-ubuntu}"
+DOMAIN="${DOMAIN:-learnwithfluo.com}"
+WWW_DOMAIN="${WWW_DOMAIN:-www.learnwithfluo.com}"
 
 APP_NAME="fluo"
 REGION="${AWS_REGION:-ca-central-1}"
@@ -60,10 +62,10 @@ fi'
 # --- Configure Nginx as reverse proxy ---
 echo "[3/4] Setting up Nginx..."
 $SSH_CMD 'sudo apt-get install -y -qq nginx'
-$SSH_CMD 'sudo tee /etc/nginx/sites-available/'"$APP_NAME"' > /dev/null <<\NGINXEOF
+$SSH_CMD 'DOMAIN='"$DOMAIN"' WWW_DOMAIN='"$WWW_DOMAIN"' sudo tee /etc/nginx/sites-available/'"$APP_NAME"' > /dev/null <<\NGINXEOF
 server {
     listen 80;
-    server_name _;
+    server_name ${DOMAIN} ${WWW_DOMAIN};
 
     client_max_body_size 25M;
 
