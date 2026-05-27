@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluo — Architecture & Flowcharts</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --purple: #bc8cff;
+            --orange: #f0883e;
+            --pink: #f778ba;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+            background: linear-gradient(135deg, #161b22 0%, #1a1f2e 50%, #161b22 100%);
+            border-bottom: 1px solid var(--border);
+        }
+        .hero h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .hero p { color: var(--muted); font-size: 1.1rem; }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(22, 27, 34, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        nav a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        nav a:hover {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        section {
+            margin: 40px 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        section .header {
+            padding: 24px 32px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        section h2 .emoji { font-size: 1.4rem; }
+        section .desc {
+            color: var(--muted);
+            font-size: 0.92rem;
+            margin-top: 6px;
+        }
+        .diagram-wrap {
+            padding: 32px;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+        .diagram-wrap .mermaid {
+            width: 800px;
+        }
+        .legend {
+            padding: 16px 32px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .callout {
+            margin: 0 32px 24px;
+            padding: 14px 18px;
+            background: rgba(88, 166, 255, 0.08);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+        .callout strong { color: var(--text); }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .connect-panel {
+            margin: 60px 0 40px;
+            background: linear-gradient(135deg, #161b22 0%, #1a1f2e 50%, #161b22 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .connect-panel h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .connect-panel .connect-name {
+            font-size: 1.1rem;
+            color: var(--text);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .connect-panel .connect-desc {
+            color: var(--muted);
+            font-size: 0.92rem;
+            margin-bottom: 24px;
+        }
+        .connect-panel .qr-code {
+            width: 180px;
+            height: 180px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: #fff;
+            padding: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.6rem; }
+            section .header { padding: 16px 20px 12px; }
+            .diagram-wrap { padding: 16px; }
+            .legend { padding: 12px 20px 16px; }
+            .callout { margin: 0 20px 16px; }
+            .connect-panel { padding: 24px 16px; }
+            .connect-panel .qr-code { width: 150px; height: 150px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>🎓 Fluo</h1>
+    <p>System Architecture &amp; Technical Flowcharts</p>
+</div>
+
+<nav>
+    <a href="#db">Database</a>
+    <a href="#lesson">Lesson Planning</a>
+    <a href="#conversation">Conversation Flow</a>
+    <a href="#connect">Connect</a>
+</nav>
+
+<div class="container">
+
+    <!-- ========== 2. DATABASE SCHEMA ========== -->
+    <section id="db">
+        <div class="header">
+            <h2><span class="emoji">🗄️</span> Database Schema (SQLite + SQLAlchemy)</h2>
+            <p class="desc">Entity-relationship diagram showing all tables and their relationships</p>
+        </div>
+        <div class="diagram-wrap">
+            <pre class="mermaid">
+erDiagram
+    SETTINGS {
+        int id PK
+        string key UK
+        string value
+        datetime updated_at
+    }
+
+    LANGUAGES {
+        int id PK
+        string name UK
+        string code
+        bool is_active
+        datetime created_at
+    }
+
+    VOCABULARY {
+        int id PK
+        int language_id FK
+        string target_word
+        string native_translation
+        text example_sentence
+        string fluency_level
+        int times_practiced
+        int times_correct
+        datetime last_practiced_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    GRAMMAR {
+        int id PK
+        int language_id FK
+        string concept_name
+        text description
+        text examples
+        string fluency_level
+        int times_practiced
+        int times_correct
+        datetime last_practiced_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    CONVERSATIONS {
+        int id PK
+        int language_id FK
+        text lesson_plan
+        text transcript
+        text analysis
+        text vocab_used
+        text grammar_used
+        datetime created_at
+    }
+
+    LANGUAGES ||--o{ VOCABULARY : "has"
+    LANGUAGES ||--o{ GRAMMAR : "has"
+    LANGUAGES ||--o{ CONVERSATIONS : "has"
+            </pre>
+        </div>
+        <div class="callout">
+            <strong>Fluency tracking:</strong> Both Vocabulary and Grammar tables track <code>times_practiced</code>, <code>times_correct</code>, and a derived <code>fluency_level</code> (low → medium → high) based on success rates and practice frequency.
+        </div>
+    </section>
+
+    <!-- ========== 5. LESSON PLANNING ========== -->
+    <section id="lesson">
+        <div class="header">
+            <h2><span class="emoji">📋</span> Phase 1: Lesson Planning</h2>
+            <p class="desc">How the system builds a level-appropriate lesson plan before the conversation begins</p>
+        </div>
+        <div class="diagram-wrap">
+            <pre class="mermaid">
+flowchart LR
+    START(("🟢 Student<br/>starts lesson"))
+    FETCH["Fetch all known<br/>vocab + grammar<br/>from DB"]
+    SELECT["Weighted random<br/>selection of practice<br/>items (prioritize low fluency)"]
+    GEN["GPT-4o generates<br/>initial lesson plan<br/>(theme, goals, topics)"]
+    REVIEW["Level Controller<br/>reviews plan"]
+    ITER{"Level appropriate?<br/>OR iteration &gt; 3?"}
+    REFINE["Refine plan<br/>based on feedback"]
+    FINAL_PLAN["✅ Final<br/>Lesson Plan"]
+    START --> FETCH --> SELECT --> GEN --> REVIEW
+    REVIEW --> ITER
+    ITER -->|"NO"| REFINE --> REVIEW
+    ITER -->|"YES"| FINAL_PLAN
+
+    style START fill:#3fb950,stroke:#3fb950,color:#fff
+    style FINAL_PLAN fill:#1a2e1a,stroke:#3fb950,color:#e6edf3
+    style REVIEW fill:#2d1f3d,stroke:#bc8cff,color:#e6edf3
+            </pre>
+        </div>
+        <div class="callout">
+            <strong>Adaptive planning:</strong> The system prioritizes low-fluency vocabulary and grammar for practice, then iteratively refines the lesson plan with the Level Controller to ensure it matches the student's CEFR level.
+        </div>
+    </section>
+
+    <!-- ========== 5b. CONVERSATION FLOW ========== -->
+    <section id="conversation">
+        <div class="header">
+            <h2><span class="emoji">💬</span> Phase 2: Conversation Flow</h2>
+            <p class="desc">Real-time dialogue loop from opening message through analysis and feedback</p>
+        </div>
+        <div class="diagram-wrap">
+            <pre class="mermaid">
+flowchart LR
+    INIT["Initialize Dialogue Agent<br/>+ Level Controller<br/>with student knowledge"]
+    OPENING["Generate opening<br/>message (with review loop)"]
+    TTS1["🔊 Text-to-Speech<br/>for opening"]
+    LOOP_START{"Student<br/>responds?"}
+    STT["🎤 Speech-to-Text<br/>(Whisper)"]
+    GEN_RESP["Generate response<br/>(with review loop)"]
+    TTS2["🔊 Text-to-Speech<br/>for response"]
+    TRANSLATE["Translate response<br/>to native language"]
+    CHECK_END{"Conversation<br/>ended?"}
+    END_NODE(("🔴 Lesson<br/>complete"))
+
+    INIT --> OPENING --> TTS1 --> LOOP_START
+    LOOP_START -->|"Audio"| STT --> GEN_RESP
+    LOOP_START -->|"Text"| GEN_RESP
+    GEN_RESP --> TTS2 --> TRANSLATE --> CHECK_END
+    CHECK_END -->|"No"| LOOP_START
+    CHECK_END -->|"Yes (≥15 exchanges<br/>or [END] marker)"| END_NODE
+
+    style INIT fill:#1a2e1a,stroke:#3fb950,color:#e6edf3
+    style END_NODE fill:#f85149,stroke:#f85149,color:#fff
+            </pre>
+        </div>
+        <div class="callout">
+            <strong>End-to-end:</strong> After the conversation ends, the system automatically extracts practiced items, runs performance analysis, updates fluency scores in the database, and returns a detailed feedback report to the student.
+        </div>
+    </section>
+
+    <!-- ========== CONNECT ========== -->
+    <div class="connect-panel" id="connect">
+        <h2>Thank you for your attention!</h2>
+        <p class="connect-desc">Opportunities, cool ideas or just chats? Let's connect!</p>
+       <p class="connect-name">Ghazaleh Delfi</p>
+        <img class="qr-code" src="../qr_code.png" alt="QR code to connect with Ghazaleh Delfi" />
+    </div>
+
+</div>
+
+<footer>
+    Language Learning App — Architecture Documentation<br/>
+    Generated for technical demo presentation
+</footer>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        themeVariables: {
+            primaryColor: '#2d333b',
+            primaryTextColor: '#e6edf3',
+            primaryBorderColor: '#444c56',
+            lineColor: '#8b949e',
+            secondaryColor: '#1f2937',
+            tertiaryColor: '#161b22',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+            fontSize: '14px'
+        },
+        flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: 'basis',
+            padding: 15
+        },
+        er: {
+            useMaxWidth: true,
+            fontSize: 13
+        }
+    });
+</script>
+
+</body>
+</html>

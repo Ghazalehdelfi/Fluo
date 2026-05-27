@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.db
+.git/
+.gitignore
+deploy/
+node_modules/
+frontend/node_modules/
+static/
+feedback.txt
+stitch-screens/
+docs/
+README.md
+setup.md
+*.pem
