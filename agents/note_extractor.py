@@ -13,7 +13,7 @@ from typing import Tuple, List, Dict
 from langgraph.graph import StateGraph, START, END
 from agents.state import NoteExtractionState
 from agents.config import LLM_MODEL, DEFAULT_TARGET_LANGUAGE, DEFAULT_NATIVE_LANGUAGE
-from agents.logging_utils import Colors, get_logger
+from agents.logging_utils import Colors, get_logger, call_llm_with_json
 
 logger = get_logger(__name__)
 
@@ -61,7 +61,8 @@ class NoteExtractorAgent:
 
         prompt = self._build_image_prompt()
 
-        response = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[
                 {
@@ -80,8 +81,6 @@ class NoteExtractorAgent:
             max_completion_tokens=4096,
             response_format={"type": "json_object"},
         )
-
-        result = json.loads(response.choices[0].message.content)
         vocab = result.get("vocabulary", [])
         grammar = result.get("grammar", [])
         logger.info(
@@ -96,14 +95,13 @@ class NoteExtractorAgent:
 
         prompt = self._build_text_prompt(text)
 
-        response = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=4096,
             response_format={"type": "json_object"},
         )
-
-        result = json.loads(response.choices[0].message.content)
         vocab = result.get("vocabulary", [])
         grammar = result.get("grammar", [])
         logger.info(

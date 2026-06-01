@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from database import Vocabulary, ConversationTopic
 from agents.config import LLM_MODEL
-from agents.logging_utils import Colors, get_logger
+from agents.logging_utils import Colors, get_logger, call_llm_with_json
 
 logger = get_logger(__name__)
 
@@ -55,9 +55,7 @@ class ClusterTopicAgent:
             logger.info(
                 f"   Generating embeddings for {len(to_embed)} new vocab items..."
             )
-            texts = [
-                f"{v.target_word}: {v.native_translation}" for v in to_embed
-            ]
+            texts = [f"{v.target_word}: {v.native_translation}" for v in to_embed]
 
             for i in range(0, len(texts), _BATCH_SIZE):
                 batch_texts = texts[i : i + _BATCH_SIZE]
@@ -93,9 +91,7 @@ class ClusterTopicAgent:
         k = max(2, min(10, n // 6))
         k = min(k, n)
 
-        logger.info(
-            f"   Running k-means: k={k} clusters over {n} vocab items..."
-        )
+        logger.info(f"   Running k-means: k={k} clusters over {n} vocab items...")
 
         kmeans = KMeans(n_clusters=k, random_state=42, n_init="auto")
         labels = kmeans.fit_predict(matrix)
@@ -146,14 +142,13 @@ Return ONLY valid JSON with no extra text:
 Topics must be concrete scenarios (e.g. "Ordering food at a restaurant and discussing the menu"),
 not generic labels (e.g. NOT just "Food")."""
 
-        response = self.client.chat.completions.create(
+        return call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=600,
             response_format={"type": "json_object"},
         )
-
-        return json.loads(response.choices[0].message.content)
 
     # ── Main entry point ─────────────────────────────────────────
 
@@ -183,9 +178,7 @@ not generic labels (e.g. NOT just "Food")."""
         )
 
         vocab_items = (
-            db.query(Vocabulary)
-            .filter(Vocabulary.language_id == language_id)
-            .all()
+            db.query(Vocabulary).filter(Vocabulary.language_id == language_id).all()
         )
 
         if len(vocab_items) < 2:
@@ -214,9 +207,7 @@ not generic labels (e.g. NOT just "Food")."""
                 }
             )
 
-        logger.info(
-            f"   {Colors.GREEN}✓ Formed {len(clusters)} clusters{Colors.END}"
-        )
+        logger.info(f"   {Colors.GREEN}✓ Formed {len(clusters)} clusters{Colors.END}")
 
         # Replace all existing topics for this language atomically
         db.query(ConversationTopic).filter(

@@ -6,10 +6,8 @@ def __getattr__(name: str):
     """Lazy-load agent classes on first access to prevent circular imports."""
     _map = {
         "NoteExtractorAgent": "agents.note_extractor",
-        "LessonPlannerAgent": "agents.lesson_planner",
         "DialogueAgent": "agents.dialogue_agent",
         "AnalysisAgent": "agents.analysis_agent",
-        "LevelControllerAgent": "agents.level_controller",
         "PlacementTestAgent": "agents.placement_agent",
     }
     if name in _map:
@@ -22,8 +20,6 @@ def __getattr__(name: str):
 
 __all__ = [
     "NoteExtractorAgent",
-    "LessonPlannerAgent",
     "DialogueAgent",
     "AnalysisAgent",
-    "LevelControllerAgent",
 ]

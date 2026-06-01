@@ -310,6 +310,7 @@ export default function Sidebar() {
               <span className="material-symbols-outlined">dashboard</span>
               <span>Dashboard</span>
             </a>
+            {currentUser?.enrolled_in_class && (
             <a
               className={`sidebar-nav-item ${activeClass("student-homework")}`}
               onClick={() => {
@@ -320,6 +321,7 @@ export default function Sidebar() {
               <span className="material-symbols-outlined">assignment</span>
               <span>My Homework</span>
             </a>
+            )}
             <a
               className={`sidebar-nav-item ${activeClass("notes")}`}
               onClick={() => {

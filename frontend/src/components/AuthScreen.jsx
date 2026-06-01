@@ -53,6 +53,7 @@ export default function AuthScreen({ initialMode = "signin", onClose }) {
         email: data.email,
         credits: data.credits,
         role: data.role,
+        enrolled_in_class: data.enrolled_in_class ?? false,
       });
     } catch {
       setError("Network error");

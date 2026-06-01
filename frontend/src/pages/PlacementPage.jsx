@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useApp } from "../context/AppContext";
+import CreditIcon from "../components/CreditIcon";
+import { useApp } from "../context/AppContext.jsx";
 
 export default function PlacementPage() {
   const {
@@ -229,6 +230,13 @@ export default function PlacementPage() {
               >
                 arrow_forward
               </span>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 15, opacity: 0.75 }}
+                title="This action uses AI and will consume credits"
+              >
+                toll
+              </span>
             </div>
           </div>
           <div
@@ -401,9 +409,10 @@ export default function PlacementPage() {
             <button
               onClick={() => submitAnswer()}
               disabled={waitingNext || !(selectedAnswer || textAnswer.trim())}
-              className="btn-primary flex-1 py-4 rounded-xl font-semibold disabled:opacity-40"
+              className="btn-primary flex-1 py-4 rounded-xl font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {waitingNext ? "Processing..." : "Submit Answer"}
+              {!waitingNext && <CreditIcon />}
             </button>
           </div>
         </div>
@@ -488,6 +497,7 @@ export default function PlacementPage() {
             >
               <span className="material-symbols-outlined">auto_fix_high</span>
               Generate Vocabulary for My Level
+              <CreditIcon />
             </button>
             <button
               onClick={() => navigate(`/${currentLanguageSlug}/`)}

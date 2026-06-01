@@ -9,7 +9,7 @@ Language-agnostic: works with any target/native language pair.
 import json
 from typing import Dict, List
 from agents.config import LLM_MODEL, DEFAULT_TARGET_LANGUAGE, DEFAULT_NATIVE_LANGUAGE
-from agents.logging_utils import Colors, get_logger
+from agents.logging_utils import Colors, get_logger, call_llm_with_json
 
 logger = get_logger(__name__)
 
@@ -309,14 +309,13 @@ IMPORTANT:
             },
         ]
 
-        response_obj = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=messages,
             max_completion_tokens=400,
             response_format={"type": "json_object"},
         )
-
-        result = json.loads(response_obj.choices[0].message.content)
         approved = result.get("approved", True)
         feedback = result.get("feedback", "")
 
@@ -387,13 +386,12 @@ Refine this lesson plan. Return ONLY the improved plan as valid JSON:
 
 Keep it appropriate for {self.level} level learning {self.target_language}."""
 
-        response = self.client.chat.completions.create(
+        refined_plan = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": review_prompt}],
             max_completion_tokens=2048,
             response_format={"type": "json_object"},
         )
-
-        refined_plan = json.loads(response.choices[0].message.content)
 
         return {"refined_plan": refined_plan}

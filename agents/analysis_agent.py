@@ -10,7 +10,7 @@ from typing import List, Dict
 from sqlalchemy.orm import Session
 from database import Vocabulary, Grammar, Conversation
 from agents.config import LLM_MODEL, DEFAULT_TARGET_LANGUAGE, DEFAULT_NATIVE_LANGUAGE
-from agents.logging_utils import Colors, get_logger
+from agents.logging_utils import Colors, get_logger, call_llm_with_json
 
 logger = get_logger(__name__)
 
@@ -108,16 +108,13 @@ Return JSON with:
 Focus on meaningful vocabulary and grammar patterns. Be thorough but fair."""
 
         logger.info(f"   Calling OpenAI for word/grammar analysis...")
-        response = self.client.chat.completions.create(
+        analysis = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=2000,
             response_format={"type": "json_object"},
         )
-
-        analysis = json.loads(response.choices[0].message.content)
-
-        # Log results
         logger.info(
             f"   {Colors.GREEN}✓ Correct words: {len(analysis.get('correct_words', []))}{Colors.END}"
         )
@@ -156,14 +153,13 @@ CONVERSATION:
 
 Return JSON: {{"overall_feedback": "your feedback here"}}"""
 
-        response = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=300,
             response_format={"type": "json_object"},
         )
-
-        result = json.loads(response.choices[0].message.content)
         feedback = result.get("overall_feedback", "Great practice session!")
         logger.info(f"   Feedback: {feedback[:80]}...")
         return feedback

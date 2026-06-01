@@ -37,22 +37,13 @@ class LessonPlanState(TypedDict, total=False):
 
 
 class DialogueResponseState(TypedDict, total=False):
-    """State for per-turn dialogue response generation with feedback loop.
-
-    Graph: START → generate_dialogue → review_response → [needs_revision?]
-                        ↑                                       │
-                        └──────── revision needed ──────────────┘
-                                  approved → END
-    """
+    """State for per-turn dialogue response generation (agentic tool-calling flow)."""
 
     conversation_history: List[Dict]
     instruction: Optional[str]
     is_opening: bool
     current_response: str
     has_end_marker: bool
-    feedback: str  # Level controller's feedback for the dialogue agent
-    approved: bool  # Whether the level controller approved the response
-    iteration: int  # Current generate→review iteration count
 
 
 class AnalysisState(TypedDict, total=False):

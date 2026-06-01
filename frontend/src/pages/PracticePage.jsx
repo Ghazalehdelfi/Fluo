@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useApp } from "../context/AppContext";
+import CreditIcon from "../components/CreditIcon";
 import { playAudio } from "../utils.jsx";
+import { useApp } from "../context/AppContext.jsx";
 
 export default function PracticePage() {
   const {
@@ -10,7 +11,6 @@ export default function PracticePage() {
     showLoading,
     hideLoading,
     fetchTopics,
-    userLevel,
     pendingConversationTopic,
     setPendingConversationTopic,
   } = useApp();
@@ -18,7 +18,6 @@ export default function PracticePage() {
 
   // Setup state
   const [mode, setMode] = useState("lesson"); // 'lesson' | 'scenario'
-  const [level, setLevel] = useState(userLevel || "A1");
   const [topicGroups, setTopicGroups] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [customScenario, setCustomScenario] = useState("");
@@ -29,6 +28,7 @@ export default function PracticePage() {
   const [inputText, setInputText] = useState("");
   const [recording, setRecording] = useState(false);
   const [processingAudio, setProcessingAudio] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Analysis state
   const [analysis, setAnalysis] = useState(null);
@@ -38,15 +38,9 @@ export default function PracticePage() {
   const messagesEndRef = useRef(null);
   const textInputRef = useRef(null);
 
-  const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
-
   useEffect(() => {
     if (currentLanguageId) loadTopics();
   }, [currentLanguageId]);
-
-  useEffect(() => {
-    if (userLevel) setLevel(userLevel);
-  }, [userLevel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -71,7 +65,7 @@ export default function PracticePage() {
     try {
       let resp;
       if (mode === "lesson") {
-        const params = new URLSearchParams({ level });
+        const params = new URLSearchParams();
         if (selectedTopicId) params.append("topic_id", selectedTopicId);
         resp = await apiFetch(
           `/api/start-lesson/${currentLanguageId}?${params}`,
@@ -118,7 +112,9 @@ export default function PracticePage() {
     if (!text || !sessionId) return;
     setInputText("");
     setMessages((msgs) => [...msgs, { role: "user", content: text }]);
+    setIsTyping(true);
     await sendResponse({ text });
+    setIsTyping(false);
   }
 
   async function sendResponse({ text, audioBlob }) {
@@ -132,17 +128,17 @@ export default function PracticePage() {
       });
       if (!resp.ok) return;
       const data = await resp.json();
-      if (data.user_text && audioBlob) {
+      if (data.user_message && audioBlob) {
         setMessages((msgs) => [
           ...msgs.slice(0, -0),
-          { role: "user", content: data.user_text },
+          { role: "user", content: data.user_message },
         ]);
       }
       setMessages((msgs) => [
         ...msgs,
         {
           role: "assistant",
-          content: data.message,
+          content: data.response,
           translation: data.translation,
           audio: data.audio,
         },
@@ -167,12 +163,14 @@ export default function PracticePage() {
       stream.getTracks().forEach((t) => t.stop());
       const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
       setProcessingAudio(true);
+      setIsTyping(true);
       setMessages((msgs) => [
         ...msgs,
         { role: "user", content: "🎤 Voice message...", pending: true },
       ]);
       await sendResponse({ audioBlob: blob });
       setProcessingAudio(false);
+      setIsTyping(false);
     };
     mr.start();
     mediaRecorderRef.current = mr;
@@ -267,7 +265,7 @@ export default function PracticePage() {
                     Lesson
                   </h4>
                   <p className="text-xs mt-1 text-[#596060]">
-                    AI-guided lesson on a topic of your choice
+                    AI will choose the topic
                   </p>
                 </div>
                 <div
@@ -288,7 +286,7 @@ export default function PracticePage() {
                     Scenario
                   </h4>
                   <p className="text-xs mt-1 text-[#596060]">
-                    Practice a real-life conversation scenario
+                    Choose your own topic
                   </p>
                 </div>
               </div>
@@ -296,30 +294,6 @@ export default function PracticePage() {
 
             {mode === "lesson" && (
               <>
-                {/* Level selector */}
-                <div
-                  className="bg-white rounded-2xl p-6"
-                  style={{ boxShadow: "0 4px 16px rgba(45,52,51,0.06)" }}
-                >
-                  <h3
-                    className="font-semibold mb-4"
-                    style={{ color: "var(--dark)" }}
-                  >
-                    Your Level
-                  </h3>
-                  <div className="flex gap-2">
-                    {LEVELS.map((l) => (
-                      <button
-                        key={l}
-                        onClick={() => setLevel(l)}
-                        className={`flex-1 py-3 rounded-xl text-sm font-bold ${l === level ? "btn-primary" : "btn-secondary"}`}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Topic picker */}
                 {topicGroups.length > 0 && (
                   <div
@@ -395,6 +369,7 @@ export default function PracticePage() {
             >
               <span className="material-symbols-outlined">mic</span>
               Start Session
+              <CreditIcon />
             </button>
           </div>
 
@@ -462,7 +437,7 @@ export default function PracticePage() {
             </h2>
             <p className="text-sm text-[#596060]">
               {currentLanguageName} —{" "}
-              {mode === "lesson" ? `Lesson (${level})` : "Scenario"}
+              {mode === "lesson" ? "Lesson" : "Scenario"}
             </p>
           </div>
           <button
@@ -485,8 +460,8 @@ export default function PracticePage() {
           {messages.map((msg, i) => (
             <MessageBubble key={i} msg={msg} />
           ))}
+          {isTyping && <TypingIndicator />}
           <div ref={messagesEndRef} />
-          {processingAudio && <TypingIndicator />}
         </div>
 
         <div className="shrink-0 pt-4 pb-2">
@@ -512,12 +487,15 @@ export default function PracticePage() {
               className="input-field flex-1 px-5 py-3 rounded-xl text-sm"
               placeholder="Or type your message..."
               value={inputText}
+              disabled={isTyping}
               onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendText()}
+              onKeyDown={(e) =>
+                e.key === "Enter" && !e.shiftKey && !isTyping && sendText()
+              }
             />
             <button
               onClick={sendText}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || isTyping}
               className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-40"
               style={{
                 background: "var(--primary)",
@@ -762,7 +740,7 @@ function TypingIndicator() {
         AI
       </div>
       <div
-        className="px-5 py-4 rounded-2xl typing-indicator"
+        className="px-5 py-3 rounded-2xl typing-indicator"
         style={{
           background: "var(--white)",
           boxShadow: "0 4px 16px rgba(45,52,51,0.06)",

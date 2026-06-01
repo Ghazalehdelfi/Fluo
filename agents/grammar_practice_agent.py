@@ -8,7 +8,7 @@ import json
 import uuid
 from typing import List, Dict, Optional
 from agents.config import LLM_MODEL, DEFAULT_TARGET_LANGUAGE, DEFAULT_NATIVE_LANGUAGE
-from agents.logging_utils import Colors, get_logger
+from agents.logging_utils import Colors, get_logger, call_llm_with_json
 
 logger = get_logger(__name__)
 
@@ -24,7 +24,6 @@ class GrammarPracticeAgent:
         native_language: str = DEFAULT_NATIVE_LANGUAGE,
         level: str = "B1",
         fluency_level: str = "low",
-        cost_tracker=None,
     ):
         self.client = client
         self.model = LLM_MODEL
@@ -32,7 +31,7 @@ class GrammarPracticeAgent:
         self.native_language = native_language
         self.level = level
         self.fluency_level = fluency_level
-        self.cost_tracker = cost_tracker
+        self.cost_tracker = None
 
     def generate_questions(self, grammar_card: Dict) -> List[Dict]:
         """
@@ -150,22 +149,14 @@ Return ONLY this JSON (no markdown):
   "feedback": "One encouraging sentence explaining what was right or what was wrong (max 20 words)"
 }}"""
 
-        response = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=200,
             response_format={"type": "json_object"},
             temperature=0.2,
         )
-
-        if self.cost_tracker and response.usage:
-            self.cost_tracker.record_chat(
-                self.model,
-                response.usage.prompt_tokens,
-                response.usage.completion_tokens,
-            )
-
-        result = json.loads(response.choices[0].message.content)
         logger.info(
             f"   {'✓ Correct' if result.get('is_correct') else '✗ Incorrect'}: {result.get('feedback', '')}"
         )

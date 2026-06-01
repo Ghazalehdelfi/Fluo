@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
-import { useApp } from "../context/AppContext";
+import CreditIcon from "../components/CreditIcon";
 import { getLanguageEmoji } from "../utils.jsx";
+import { useApp } from "../context/AppContext.jsx";
 
 export default function UploadPage() {
   const {
@@ -132,7 +133,8 @@ export default function UploadPage() {
         prev
           ? {
               ...prev,
-              grammar_added: (prev.grammar_added || 0) + (action === "create_new" ? 1 : 0),
+              grammar_added:
+                (prev.grammar_added || 0) + (action === "create_new" ? 1 : 0),
             }
           : prev,
       );
@@ -293,6 +295,7 @@ export default function UploadPage() {
             >
               <span className="material-symbols-outlined">auto_fix_high</span>
               Extract from Images
+              <CreditIcon />
             </button>
             <button
               onClick={uploadText}
@@ -304,6 +307,7 @@ export default function UploadPage() {
             >
               <span className="material-symbols-outlined">description</span>
               Extract from Text
+              <CreditIcon />
             </button>
           </div>
 
@@ -355,7 +359,9 @@ export default function UploadPage() {
             style={{ boxShadow: "0 8px 32px rgba(45,52,51,0.06)" }}
           >
             <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-amber-500">help</span>
+              <span className="material-symbols-outlined text-amber-500">
+                help
+              </span>
               <h3
                 className="text-2xl font-bold tracking-tight"
                 style={{ color: "var(--dark)" }}
@@ -364,8 +370,8 @@ export default function UploadPage() {
               </h3>
             </div>
             <p className="text-[#596060] text-sm mb-6">
-              These concepts are similar to ones you already have. Choose whether
-              to merge with the existing card or create a new one.
+              These concepts are similar to ones you already have. Choose
+              whether to merge with the existing card or create a new one.
             </p>
             <div className="space-y-6">
               {pendingGrammar.map((item, idx) => (
@@ -432,7 +438,9 @@ export default function UploadPage() {
                         color: "var(--on-primary)",
                       }}
                     >
-                      {resolvingIndex === idx ? "Working…" : "Merge into existing"}
+                      {resolvingIndex === idx
+                        ? "Working…"
+                        : "Merge into existing"}
                     </button>
                     <button
                       onClick={() => resolvePending(idx, "create_new")}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useApp } from "../context/AppContext";
+import CreditIcon from "../components/CreditIcon";
+import { useApp } from "../context/AppContext.jsx";
 
 export default function GrammarPracticePage() {
   const {
@@ -253,6 +254,7 @@ export default function GrammarPracticePage() {
           >
             <span className="material-symbols-outlined">exercise</span>
             Start Practice
+            <CreditIcon />
           </button>
         </div>
       </div>

@@ -8,7 +8,7 @@ Language-agnostic: works with any target/native language pair.
 import json
 from typing import Dict, List, Optional
 from agents.config import LLM_MODEL, DEFAULT_TARGET_LANGUAGE, DEFAULT_NATIVE_LANGUAGE
-from agents.logging_utils import Colors, get_logger
+from agents.logging_utils import Colors, get_logger, call_llm_with_json
 
 logger = get_logger(__name__)
 
@@ -92,17 +92,16 @@ Return valid JSON:
 
 Return ONLY the JSON, no extra text."""
 
-        response = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=500,
             response_format={"type": "json_object"},
         )
-
-        result = json.loads(response.choices[0].message.content)
         result["level"] = level
         logger.info(
-            f"   {Colors.GREEN}✓ Generated {result.get('type', '?')} question at {level}{Colors.END}"
+            f"   {Colors.GREEN}\u2713 Generated {result.get('type', '?')} question at {level}{Colors.END}"
         )
         return result
 
@@ -134,14 +133,13 @@ Return valid JSON:
 
 Return ONLY the JSON, no extra text."""
 
-        response = self.client.chat.completions.create(
+        result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=300,
             response_format={"type": "json_object"},
         )
-
-        result = json.loads(response.choices[0].message.content)
         status = "✓ Correct" if result.get("correct") else "✗ Incorrect"
         logger.info(f"   {Colors.GREEN}{status}{Colors.END}")
         return result
@@ -231,14 +229,13 @@ Return valid JSON:
 
 Return exactly 50 items. Return ONLY valid JSON."""
 
-            response = self.client.chat.completions.create(
+            batch_result = call_llm_with_json(
+                self.client.chat.completions.create,
                 model=self.model,
                 messages=[{"role": "user", "content": vocab_prompt}],
                 max_completion_tokens=8000,
                 response_format={"type": "json_object"},
             )
-
-            batch_result = json.loads(response.choices[0].message.content)
             batch_vocab = batch_result.get("vocabulary", [])
             all_vocab.extend(batch_vocab)
             logger.info(
@@ -274,14 +271,13 @@ Return valid JSON:
 
 Return exactly 10 items. Return ONLY valid JSON."""
 
-        response = self.client.chat.completions.create(
+        grammar_result = call_llm_with_json(
+            self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": grammar_prompt}],
             max_completion_tokens=4000,
             response_format={"type": "json_object"},
         )
-
-        grammar_result = json.loads(response.choices[0].message.content)
         grammar = grammar_result.get("grammar", [])
 
         logger.info(
