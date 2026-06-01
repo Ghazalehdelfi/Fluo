@@ -21,6 +21,7 @@ def rebuild_topics(language_id: int, language_name: str) -> None:
             logger.error("ClusterTopicAgent: OPENAI_API_KEY not set — skipping")
             return
         from openai import OpenAI as _OpenAI
+
         client = _OpenAI(api_key=api_key)
         agent = ClusterTopicAgent(client)
         agent.run(language_id, db, language_name)

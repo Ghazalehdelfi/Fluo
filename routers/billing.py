@@ -22,9 +22,9 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
 CREDIT_PACKS = {
-    "5":  {"amount_cents": 500,  "credits": 100},   # $5  = 100 credits
-    "10": {"amount_cents": 1000, "credits": 200},   # $10 = 200 credits
-    "20": {"amount_cents": 2000, "credits": 400},   # $20 = 400 credits
+    "5": {"amount_cents": 500, "credits": 100},  # $5  = 100 credits
+    "10": {"amount_cents": 1000, "credits": 200},  # $10 = 200 credits
+    "20": {"amount_cents": 2000, "credits": 400},  # $20 = 400 credits
 }
 
 
@@ -128,7 +128,9 @@ async def handle_stripe_webhook(request: Request):
         credits_to_add = float(metadata.get("credits", "100"))
 
         if not client_ref:
-            logger.warning("Webhook: checkout.session.completed without client_reference_id")
+            logger.warning(
+                "Webhook: checkout.session.completed without client_reference_id"
+            )
             return {"status": "ignored"}
 
         user_id = int(client_ref)

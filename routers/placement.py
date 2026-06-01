@@ -347,7 +347,9 @@ async def placement_test_save_content(
         if any(concept_lower == name for name, _ in accepted_in_batch):
             continue
 
-        candidate_text = grammar_embed_text(gram["concept_name"], gram.get("description", ""))
+        candidate_text = grammar_embed_text(
+            gram["concept_name"], gram.get("description", "")
+        )
         candidate_vec = embed_text(api_key, candidate_text)
 
         most_similar, similarity = find_most_similar_grammar(

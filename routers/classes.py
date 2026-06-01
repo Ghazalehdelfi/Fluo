@@ -12,10 +12,18 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import (
-    User, Language, Vocabulary, Grammar,
-    Class, ClassStudent, Homework,
-    HomeworkVocabRef, HomeworkGrammarRef,
-    HomeworkGrammarQuestion, HomeworkTopic, HomeworkCompletion,
+    User,
+    Language,
+    Vocabulary,
+    Grammar,
+    Class,
+    ClassStudent,
+    Homework,
+    HomeworkVocabRef,
+    HomeworkGrammarRef,
+    HomeworkGrammarQuestion,
+    HomeworkTopic,
+    HomeworkCompletion,
     SessionLocal,
 )
 from auth import get_current_user, require_teacher
@@ -37,7 +45,9 @@ def _generate_class_code(length: int = 8) -> str:
     return "".join(_secrets.choice(alphabet) for _ in range(length))
 
 
-def _homework_belongs_to_teacher(homework_id: int, teacher_id: int, db: Session) -> Homework:
+def _homework_belongs_to_teacher(
+    homework_id: int, teacher_id: int, db: Session
+) -> Homework:
     hw = (
         db.query(Homework)
         .filter(Homework.id == homework_id, Homework.teacher_id == teacher_id)
@@ -241,7 +251,9 @@ async def add_student_to_class(
         raise HTTPException(status_code=400, detail="That user is not a student")
     existing = (
         db.query(ClassStudent)
-        .filter(ClassStudent.class_id == class_id, ClassStudent.student_id == student.id)
+        .filter(
+            ClassStudent.class_id == class_id, ClassStudent.student_id == student.id
+        )
         .first()
     )
     if existing:
@@ -261,7 +273,9 @@ async def remove_student_from_class(
     _class_belongs_to_teacher(class_id, teacher.id, db)
     row = (
         db.query(ClassStudent)
-        .filter(ClassStudent.class_id == class_id, ClassStudent.student_id == student_id)
+        .filter(
+            ClassStudent.class_id == class_id, ClassStudent.student_id == student_id
+        )
         .first()
     )
     if not row:
@@ -312,7 +326,9 @@ async def create_homework(
         try:
             due = datetime.fromisoformat(body.due_date)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid due_date format (use ISO 8601)")
+            raise HTTPException(
+                status_code=400, detail="Invalid due_date format (use ISO 8601)"
+            )
     hw = Homework(
         class_id=body.class_id,
         teacher_id=teacher.id,
@@ -344,10 +360,14 @@ async def list_homework(
     for hw in hws:
         cls = db.query(Class).filter(Class.id == hw.class_id).first()
         vocab_count = (
-            db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == hw.id).count()
+            db.query(HomeworkVocabRef)
+            .filter(HomeworkVocabRef.homework_id == hw.id)
+            .count()
         )
         grammar_count = (
-            db.query(HomeworkGrammarRef).filter(HomeworkGrammarRef.homework_id == hw.id).count()
+            db.query(HomeworkGrammarRef)
+            .filter(HomeworkGrammarRef.homework_id == hw.id)
+            .count()
         )
         topic_count = (
             db.query(HomeworkTopic).filter(HomeworkTopic.homework_id == hw.id).count()
@@ -380,7 +400,9 @@ async def get_homework(
     cls = db.query(Class).filter(Class.id == hw.class_id).first()
 
     vocab_refs = (
-        db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == homework_id).all()
+        db.query(HomeworkVocabRef)
+        .filter(HomeworkVocabRef.homework_id == homework_id)
+        .all()
     )
     vocab_items = []
     for ref in vocab_refs:
@@ -397,7 +419,9 @@ async def get_homework(
             )
 
     grammar_refs = (
-        db.query(HomeworkGrammarRef).filter(HomeworkGrammarRef.homework_id == homework_id).all()
+        db.query(HomeworkGrammarRef)
+        .filter(HomeworkGrammarRef.homework_id == homework_id)
+        .all()
     )
     grammar_items = []
     for ref in grammar_refs:
@@ -452,7 +476,9 @@ async def get_homework(
     )
     completion_summary: dict = {}
     for c in completions:
-        completion_summary[c.exercise_type] = completion_summary.get(c.exercise_type, 0) + 1
+        completion_summary[c.exercise_type] = (
+            completion_summary.get(c.exercise_type, 0) + 1
+        )
 
     return {
         "id": hw.id,
@@ -716,11 +742,15 @@ Learner level: {user_level}"""
             grammar.detail_card = json.dumps(json.loads(raw))
         except json.JSONDecodeError:
             grammar.detail_card = json.dumps(
-                {"concept": grammar.concept_name, "description": grammar.description or ""}
+                {
+                    "concept": grammar.concept_name,
+                    "description": grammar.description or "",
+                }
             )
         db.commit()
 
     from openai import OpenAI as _OpenAI
+
     client = _OpenAI(api_key=api_key)
     agent = GrammarPracticeAgent(
         client,
@@ -733,7 +763,10 @@ Learner level: {user_level}"""
     try:
         detail_card = json.loads(grammar.detail_card)
     except (json.JSONDecodeError, ValueError):
-        detail_card = {"concept": grammar.concept_name, "description": grammar.description}
+        detail_card = {
+            "concept": grammar.concept_name,
+            "description": grammar.description,
+        }
 
     questions = agent.generate_questions(detail_card)
     for i, q in enumerate(questions):
@@ -947,7 +980,9 @@ async def get_student_homework_detail(
 
     enrollment = (
         db.query(ClassStudent)
-        .filter(ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id)
+        .filter(
+            ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
+        )
         .first()
     )
     if not enrollment:
@@ -956,7 +991,9 @@ async def get_student_homework_detail(
     cls = db.query(Class).filter(Class.id == hw.class_id).first()
 
     vocab_refs = (
-        db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == homework_id).all()
+        db.query(HomeworkVocabRef)
+        .filter(HomeworkVocabRef.homework_id == homework_id)
+        .all()
     )
     vocab_items = []
     for ref in vocab_refs:
@@ -972,7 +1009,9 @@ async def get_student_homework_detail(
             )
 
     grammar_refs = (
-        db.query(HomeworkGrammarRef).filter(HomeworkGrammarRef.homework_id == homework_id).all()
+        db.query(HomeworkGrammarRef)
+        .filter(HomeworkGrammarRef.homework_id == homework_id)
+        .all()
     )
     grammar_items = []
     for ref in grammar_refs:
@@ -1063,7 +1102,9 @@ async def student_start_flashcards(
 
     enrollment = (
         db.query(ClassStudent)
-        .filter(ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id)
+        .filter(
+            ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
+        )
         .first()
     )
     if not enrollment:
@@ -1092,14 +1133,20 @@ async def student_start_flashcards(
                 db.flush()
 
     if not student_lang:
-        raise HTTPException(status_code=400, detail="Could not determine student language")
+        raise HTTPException(
+            status_code=400, detail="Could not determine student language"
+        )
 
     vocab_refs = (
-        db.query(HomeworkVocabRef).filter(HomeworkVocabRef.homework_id == homework_id).all()
+        db.query(HomeworkVocabRef)
+        .filter(HomeworkVocabRef.homework_id == homework_id)
+        .all()
     )
     deck = []
     for ref in vocab_refs:
-        teacher_vocab = db.query(Vocabulary).filter(Vocabulary.id == ref.vocabulary_id).first()
+        teacher_vocab = (
+            db.query(Vocabulary).filter(Vocabulary.id == ref.vocabulary_id).first()
+        )
         if not teacher_vocab:
             continue
         existing = (
@@ -1157,7 +1204,9 @@ async def student_complete_exercise(
 
     enrollment = (
         db.query(ClassStudent)
-        .filter(ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id)
+        .filter(
+            ClassStudent.class_id == hw.class_id, ClassStudent.student_id == user.id
+        )
         .first()
     )
     if not enrollment:

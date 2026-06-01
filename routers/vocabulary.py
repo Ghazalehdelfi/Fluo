@@ -202,7 +202,9 @@ async def resolve_pending_grammar(
             .first()
         )
         if not existing:
-            raise HTTPException(status_code=404, detail="Existing grammar card not found")
+            raise HTTPException(
+                status_code=404, detail="Existing grammar card not found"
+            )
 
         if not check_sufficient_credits(user, min_credits=1):
             raise HTTPException(
@@ -275,7 +277,9 @@ Learner level: {user_level}"""
             existing.examples = merged_card.get("examples", existing.examples)
 
         new_desc = (
-            merged_card.get("tagline", existing.description) or existing.description or ""
+            merged_card.get("tagline", existing.description)
+            or existing.description
+            or ""
         )
         new_text = grammar_embed_text(existing.concept_name, new_desc)
         existing.embedding = json.dumps(embed_text(api_key, new_text))

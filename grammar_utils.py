@@ -30,6 +30,7 @@ def cosine_similarity(a: list, b: list) -> float:
 def embed_text(api_key: str, text: str) -> list:
     """Embed *text* with text-embedding-3-small and return the float vector."""
     from openai import OpenAI as _OpenAI
+
     client = _OpenAI(api_key=api_key)
     response = client.embeddings.create(model=_EMBEDDING_MODEL, input=text[:8192])
     return response.data[0].embedding
@@ -47,7 +48,9 @@ def ensure_grammar_embedding(item, api_key: str, db) -> list:
             return json.loads(item.embedding)
         except (json.JSONDecodeError, ValueError):
             pass
-    vec = embed_text(api_key, grammar_embed_text(item.concept_name, item.description or ""))
+    vec = embed_text(
+        api_key, grammar_embed_text(item.concept_name, item.description or "")
+    )
     item.embedding = json.dumps(vec)
     db.add(item)
     db.flush()

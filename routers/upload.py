@@ -3,7 +3,15 @@
 import logging
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    BackgroundTasks,
+)
 from sqlalchemy.orm import Session
 
 from database import User, Language, Vocabulary, Grammar, SessionLocal
@@ -62,7 +70,9 @@ async def upload_notes(
     if not lang:
         raise HTTPException(status_code=404, detail="Language not found")
 
-    logger.info(f"{Colors.GREEN}📝 NOTE EXTRACTOR: Processing upload for {lang.name}{Colors.END}")
+    logger.info(
+        f"{Colors.GREEN}📝 NOTE EXTRACTOR: Processing upload for {lang.name}{Colors.END}"
+    )
     logger.info(f"   Native language: {native_lang}")
 
     extractor = NoteExtractorAgent(tracked_client, lang.name, native_lang)
@@ -143,7 +153,9 @@ async def upload_notes(
             continue
 
         all_existing = db.query(Grammar).filter(Grammar.language_id == lang_id).all()
-        candidate_text = grammar_embed_text(gram["concept_name"], gram.get("description", ""))
+        candidate_text = grammar_embed_text(
+            gram["concept_name"], gram.get("description", "")
+        )
         candidate_vec = embed_text(api_key, candidate_text)
 
         most_similar, similarity = find_most_similar_grammar(
@@ -178,6 +190,7 @@ async def upload_notes(
             continue
 
         import json
+
         new_grammar = Grammar(
             language_id=lang_id,
             concept_name=gram["concept_name"],
@@ -198,13 +211,17 @@ async def upload_notes(
     if added_vocab:
         logger.info(f"   {Colors.CYAN}New vocabulary added:{Colors.END}")
         for v in added_vocab[:5]:
-            logger.info(f"      • {v['target_word']} → {v.get('native_translation', '')}")
+            logger.info(
+                f"      • {v['target_word']} → {v.get('native_translation', '')}"
+            )
         if len(added_vocab) > 5:
             logger.info(f"      ... and {len(added_vocab) - 5} more")
 
     if added_vocab and background_tasks is not None:
         background_tasks.add_task(rebuild_topics, lang_id, lang.name)
-        logger.info(f"   {Colors.CYAN}⚙ Topic clustering queued as background task{Colors.END}")
+        logger.info(
+            f"   {Colors.CYAN}⚙ Topic clustering queued as background task{Colors.END}"
+        )
 
     return {
         "message": "Notes processed successfully",

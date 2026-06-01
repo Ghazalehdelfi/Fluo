@@ -32,7 +32,9 @@ def get_api_key() -> str:
 def get_elevenlabs_client():
     """Return an ElevenLabs client if the SDK is installed and the API key is set."""
     if _ElevenLabs is None:
-        logger.warning("elevenlabs package not installed — TTS/STT will fall back to OpenAI")
+        logger.warning(
+            "elevenlabs package not installed — TTS/STT will fall back to OpenAI"
+        )
         return None
     api_key = os.getenv("ELEVENLABS_API_KEY")
     if not api_key:
@@ -44,6 +46,7 @@ def get_elevenlabs_client():
 def get_native_language(db: Session, user_id: int) -> str:
     """Get native language from per-user settings."""
     from database import Settings
+
     native = (
         db.query(Settings)
         .filter(Settings.user_id == user_id, Settings.key == "native_language")
@@ -55,6 +58,7 @@ def get_native_language(db: Session, user_id: int) -> str:
 def get_user_level(db: Session, user_id: int) -> str:
     """Get the user's default CEFR level from settings (default A1)."""
     from database import Settings
+
     setting = (
         db.query(Settings)
         .filter(Settings.user_id == user_id, Settings.key == "user_level")

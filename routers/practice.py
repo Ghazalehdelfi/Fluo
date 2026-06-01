@@ -118,7 +118,9 @@ async def submit_grammar_practice_answer(
 
     session = grammar_practice_sessions.get((user.id, session_id))
     if not session:
-        raise HTTPException(status_code=404, detail="Grammar practice session not found")
+        raise HTTPException(
+            status_code=404, detail="Grammar practice session not found"
+        )
 
     questions = session["questions"]
     if body.question_index < 0 or body.question_index >= len(questions):
@@ -162,7 +164,9 @@ async def end_grammar_practice(
 
     session = grammar_practice_sessions.get((user.id, session_id))
     if not session:
-        raise HTTPException(status_code=404, detail="Grammar practice session not found")
+        raise HTTPException(
+            status_code=404, detail="Grammar practice session not found"
+        )
 
     correct_count = session["correct_count"]
     total = len(session["questions"])

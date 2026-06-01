@@ -4,17 +4,36 @@ import json
 import uuid
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    BackgroundTasks,
+)
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import (
-    User, Language, Vocabulary, Grammar, Conversation,
-    ConversationTopic, SessionLocal,
+    User,
+    Language,
+    Vocabulary,
+    Grammar,
+    Conversation,
+    ConversationTopic,
+    SessionLocal,
 )
 from auth import get_current_user
 from cost_tracker import TrackedOpenAI, check_sufficient_credits
-from dependencies import get_db, get_api_key, get_native_language, get_user_level, get_elevenlabs_client
+from dependencies import (
+    get_db,
+    get_api_key,
+    get_native_language,
+    get_user_level,
+    get_elevenlabs_client,
+)
 from session_store import active_sessions
 from tasks import rebuild_topics
 from agents.dialogue_agent import DialogueAgent
@@ -142,8 +161,11 @@ async def start_lesson(
     target_lang = lang.name
     level = get_user_level(db, user.id)
 
-    _log("POST", f"/api/start-lesson/{language_id}",
-         f"topic_id={topic_id}, vocab={num_vocab}, grammar={num_grammar}, level={level}")
+    _log(
+        "POST",
+        f"/api/start-lesson/{language_id}",
+        f"topic_id={topic_id}, vocab={num_vocab}, grammar={num_grammar}, level={level}",
+    )
 
     session_id = str(uuid.uuid4())
     tracked_client = TrackedOpenAI(
@@ -165,13 +187,17 @@ async def start_lesson(
     num_grammar = min(num_grammar, grammar_count)
 
     dialogue = DialogueAgent(
-        tracked_client, target_lang, native_lang,
+        tracked_client,
+        target_lang,
+        native_lang,
         elevenlabs_client=get_elevenlabs_client(),
     )
     all_known_items = dialogue.get_all_known_items(db, language_id)
 
     if topic_id is not None:
-        logger.info(f"\n{Colors.YELLOW}📋 LESSON PLANNER: Using pre-computed topic id={topic_id}{Colors.END}")
+        logger.info(
+            f"\n{Colors.YELLOW}📋 LESSON PLANNER: Using pre-computed topic id={topic_id}{Colors.END}"
+        )
         db_topic = (
             db.query(ConversationTopic)
             .filter(
@@ -197,7 +223,9 @@ async def start_lesson(
             for v in vocab_objs
         ]
 
-        selected_items = dialogue.select_items_for_practice(db, 0, num_grammar, language_id)
+        selected_items = dialogue.select_items_for_practice(
+            db, 0, num_grammar, language_id
+        )
         selected_items["vocabulary"] = vocab_list
 
         lesson_plan = {
@@ -220,7 +248,9 @@ async def start_lesson(
         }
     else:
         logger.info(f"\n{Colors.YELLOW}📋 Selecting items on the fly...{Colors.END}")
-        selected_items = dialogue.select_items_for_practice(db, num_vocab, num_grammar, language_id)
+        selected_items = dialogue.select_items_for_practice(
+            db, num_vocab, num_grammar, language_id
+        )
         lesson_plan = None
 
     theme_hint = lesson_plan["theme"] if lesson_plan is not None else None
@@ -301,11 +331,15 @@ async def start_scenario(
     )
 
     dialogue = DialogueAgent(
-        tracked_client, target_lang, native_lang,
+        tracked_client,
+        target_lang,
+        native_lang,
         elevenlabs_client=get_elevenlabs_client(),
     )
     all_known_items = dialogue.get_all_known_items(db, language_id)
-    opening_message = dialogue.initialize_scenario(body.scenario, all_known_items, level)
+    opening_message = dialogue.initialize_scenario(
+        body.scenario, all_known_items, level
+    )
 
     audio_bytes = dialogue.text_to_speech(opening_message)
     opening_translation = dialogue.translate_to_native(opening_message)
@@ -321,7 +355,9 @@ async def start_scenario(
         "user_id": user.id,
     }
 
-    logger.info(f"\n{Colors.GREEN}✅ Scenario session created: {session_id[:8]}...{Colors.END}")
+    logger.info(
+        f"\n{Colors.GREEN}✅ Scenario session created: {session_id[:8]}...{Colors.END}"
+    )
 
     return {
         "session_id": session_id,
@@ -363,7 +399,9 @@ async def respond_to_conversation(
     if audio:
         logger.info(f"{Colors.CYAN}🎤 Processing audio input...{Colors.END}")
         audio_bytes = await audio.read()
-        user_message = dialogue.speech_to_text(audio_bytes, audio.filename or "audio.webm")
+        user_message = dialogue.speech_to_text(
+            audio_bytes, audio.filename or "audio.webm"
+        )
     elif text:
         logger.info(f"{Colors.CYAN}⌨️  Processing text input...{Colors.END}")
         user_message = text

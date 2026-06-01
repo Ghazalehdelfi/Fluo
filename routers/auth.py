@@ -32,7 +32,9 @@ async def register(body: AuthRegister, db: Session = Depends(get_db)):
     if len(email) < 3:
         raise HTTPException(status_code=400, detail="Email/username is too short")
     if len(body.password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 8 characters"
+        )
 
     role = body.role if body.role in ("student", "teacher") else "student"
 

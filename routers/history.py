@@ -8,7 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import (
-    User, Language, Vocabulary, Grammar, Conversation, Settings,
+    User,
+    Language,
+    Vocabulary,
+    Grammar,
+    Conversation,
+    Settings,
 )
 from auth import get_current_user
 from dependencies import get_db, get_native_language
@@ -66,7 +71,9 @@ async def get_language_stats(
 
     vocab_by_fluency = {
         level: db.query(Vocabulary)
-        .filter(Vocabulary.language_id == language_id, Vocabulary.fluency_level == level)
+        .filter(
+            Vocabulary.language_id == language_id, Vocabulary.fluency_level == level
+        )
         .count()
         for level in ("low", "medium", "high")
     }
@@ -228,7 +235,9 @@ async def get_dashboard(
     ):
         if d:
             activity_dates.add(
-                d if isinstance(d, date) else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
+                d
+                if isinstance(d, date)
+                else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
             )
 
     if user_lang_ids:
@@ -243,7 +252,9 @@ async def get_dashboard(
         ):
             if d:
                 activity_dates.add(
-                    d if isinstance(d, date) else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
+                    d
+                    if isinstance(d, date)
+                    else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
                 )
 
         for (d,) in (
@@ -257,7 +268,9 @@ async def get_dashboard(
         ):
             if d:
                 activity_dates.add(
-                    d if isinstance(d, date) else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
+                    d
+                    if isinstance(d, date)
+                    else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
                 )
 
     streak = 0
