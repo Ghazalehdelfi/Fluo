@@ -1,5 +1,6 @@
 """Note upload and extraction route: POST /api/upload-notes."""
 
+import io
 import logging
 import uuid
 from typing import List, Optional
@@ -28,6 +29,13 @@ from grammar_utils import (
 from tasks import rebuild_topics
 from agents.note_extractor import NoteExtractorAgent
 from agents.logging_utils import Colors, get_logger
+
+try:
+    from pypdf import PdfReader
+
+    _HAS_PYPDF = True
+except ImportError:
+    _HAS_PYPDF = False
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -80,12 +88,42 @@ async def upload_notes(
     all_vocabulary = []
     all_grammar = []
     if files and len(files) > 0 and files[0].filename:
-        logger.info(f"   Processing {len(files)} image(s)...")
+        logger.info(f"   Processing {len(files)} file(s)...")
         for i, file in enumerate(files):
-            logger.info(f"      Image {i+1}: {file.filename} ({file.content_type})")
+            logger.info(f"      File {i+1}: {file.filename} ({file.content_type})")
             contents = await file.read()
-            mime_type = file.content_type or "image/jpeg"
-            vocabulary, grammar = extractor.extract_from_image(contents, mime_type)
+            mime_type = file.content_type or "application/octet-stream"
+            try:
+                if mime_type == "application/pdf":
+                    if not _HAS_PYPDF:
+                        raise HTTPException(
+                            status_code=500, detail="PDF support not available"
+                        )
+                    reader = PdfReader(io.BytesIO(contents))
+                    pdf_text = "\n".join(
+                        page.extract_text() or "" for page in reader.pages
+                    ).strip()
+                    logger.info(f"      Extracted {len(pdf_text)} chars from PDF")
+                    if not pdf_text:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Could not extract text from PDF: {file.filename}",
+                        )
+                    vocabulary, grammar = extractor.extract_from_text(pdf_text)
+                else:
+                    vocabulary, grammar = extractor.extract_from_image(
+                        contents, mime_type
+                    )
+            except HTTPException:
+                raise
+            except Exception as exc:
+                logger.error(
+                    f"      Error processing file {file.filename}: {exc}", exc_info=True
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error processing {file.filename}: {str(exc)}",
+                )
             all_vocabulary.extend(vocabulary)
             all_grammar.extend(grammar)
     elif text:

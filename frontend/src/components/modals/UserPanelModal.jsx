@@ -191,26 +191,6 @@ export default function UserPanelModal() {
                 ))}
               </select>
             </div>
-            <div className="p-4 bg-[#f1f4f3] rounded-xl">
-              <div className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
-                Native Language
-              </div>
-              <p className="text-xs text-[#596060] mb-2">
-                Translations and app responses will use this language
-              </p>
-              <select
-                value={nativeLanguage}
-                onChange={(e) => updateNativeLanguage(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-sm font-medium border border-[#acb3b2]/30 bg-white"
-                style={{ color: "var(--dark)" }}
-              >
-                {nativeLangOptions.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
           <div className="flex space-x-3 mt-6">
             <button

@@ -138,7 +138,9 @@ class Vocabulary(Base):
     last_practiced_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    embedding = Column(Text, nullable=True)  # JSON array of floats from text-embedding-3-small
+    embedding = Column(
+        Text, nullable=True
+    )  # JSON array of floats from text-embedding-3-small
 
     language = relationship("Language", back_populates="vocabulary")
 
@@ -152,7 +154,9 @@ class Grammar(Base):
     description = Column(Text)
     examples = Column(Text, nullable=True)
     detail_card = Column(Text, nullable=True)  # JSON: generated detailed grammar card
-    embedding = Column(Text, nullable=True)  # JSON array of floats from text-embedding-3-small
+    embedding = Column(
+        Text, nullable=True
+    )  # JSON array of floats from text-embedding-3-small
     fluency_level = Column(String, default="low")  # low, medium, high
     times_practiced = Column(Integer, default=0)
     times_correct = Column(Integer, default=0)
@@ -212,9 +216,11 @@ class ConversationTopic(Base):
     id = Column(Integer, primary_key=True, index=True)
     language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     cluster_id = Column(Integer, nullable=False)  # k-means cluster index (0-based)
-    theme = Column(String, nullable=False)        # e.g. "Food & Dining"
-    topic = Column(Text, nullable=False)          # e.g. "Ordering at a restaurant"
-    vocab_ids = Column(Text, nullable=False)      # JSON array of vocabulary IDs in this cluster
+    theme = Column(String, nullable=False)  # e.g. "Food & Dining"
+    topic = Column(Text, nullable=False)  # e.g. "Ordering at a restaurant"
+    vocab_ids = Column(
+        Text, nullable=False
+    )  # JSON array of vocabulary IDs in this cluster
     generated_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
@@ -278,7 +284,9 @@ class Homework(Base):
         "HomeworkGrammarRef", back_populates="homework", cascade="all, delete-orphan"
     )
     grammar_questions = relationship(
-        "HomeworkGrammarQuestion", back_populates="homework", cascade="all, delete-orphan"
+        "HomeworkGrammarQuestion",
+        back_populates="homework",
+        cascade="all, delete-orphan",
     )
     topics = relationship(
         "HomeworkTopic", back_populates="homework", cascade="all, delete-orphan"
@@ -356,7 +364,9 @@ class HomeworkCompletion(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     homework_id = Column(Integer, ForeignKey("homework.id"), nullable=False)
-    exercise_type = Column(String(30), nullable=False)  # 'flashcards'|'grammar'|'conversation'
+    exercise_type = Column(
+        String(30), nullable=False
+    )  # 'flashcards'|'grammar'|'conversation'
     completed_at = Column(DateTime, default=datetime.utcnow)
     score = Column(Float, nullable=True)
 
@@ -364,8 +374,7 @@ class HomeworkCompletion(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "student_id", "homework_id", "exercise_type",
-            name="uq_homework_completion"
+            "student_id", "homework_id", "exercise_type", name="uq_homework_completion"
         ),
     )
 

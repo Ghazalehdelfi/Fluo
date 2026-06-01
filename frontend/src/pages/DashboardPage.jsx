@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { getLanguageEmoji, getLanguageSlug } from "../utils.jsx";
+import { getLanguageEmoji, getLanguageSlug, LangFlag } from "../utils.jsx";
 
 export default function DashboardPage() {
   const {
@@ -148,7 +148,9 @@ export default function DashboardPage() {
                 boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
               }}
             >
-              <div className="text-4xl mb-3">{getLanguageEmoji(lang)}</div>
+              <div className="text-4xl mb-3">
+                <LangFlag name={lang} style={{ fontSize: "2.25rem" }} />
+              </div>
               <div
                 className="font-semibold text-lg"
                 style={{ color: "var(--dark)" }}

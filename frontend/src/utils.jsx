@@ -3,7 +3,7 @@ export function getLanguageEmoji(name) {
     Turkish: "🇹🇷",
     Spanish: "🇪🇸",
     French: "🇫🇷",
-    Persian: "🇮🇷",
+    Persian: "🦱",
     Korean: "🇰🇷",
     Japanese: "🇯🇵",
     German: "🇩🇪",
@@ -19,6 +19,30 @@ export function getLanguageSlug(name) {
 export function getLanguageCode(name) {
   const codes = { Turkish: "TR", Spanish: "ES", French: "FR", Persian: "FA" };
   return codes[name] || name.substring(0, 2).toUpperCase();
+}
+
+export function LangFlag({ name, className = "", style = {} }) {
+  if (name === "Persian") {
+    return (
+      <img
+        src="/iran.png"
+        alt="Persian"
+        style={{
+          width: "1.2em",
+          height: "1.2em",
+          objectFit: "contain",
+          display: "inline-block",
+          ...style,
+        }}
+        className={className}
+      />
+    );
+  }
+  return (
+    <span className={className} style={style}>
+      {getLanguageEmoji(name) || "🌍"}
+    </span>
+  );
 }
 
 export function speakText(text, rate = 0.85) {
@@ -106,13 +130,19 @@ export function parsePath(path) {
   if (parts[0] === "settings") return { page: "settings" };
   if (parts[0] === "teacher") {
     if (parts[1] === "classes") return { page: "teacher-classes" };
-    if (parts[1] === "homework" && parts[2] === "create") return { page: "create-homework" };
-    if (parts[1] === "homework" && parts[2] && parts[2] !== "create") return { page: "homework-detail", homeworkId: parseInt(parts[2]) };
+    if (parts[1] === "homework" && parts[2] === "create")
+      return { page: "create-homework" };
+    if (parts[1] === "homework" && parts[2] && parts[2] !== "create")
+      return { page: "homework-detail", homeworkId: parseInt(parts[2]) };
     if (parts[1] === "homework") return { page: "teacher-homework" };
     return { page: "teacher-classes" };
   }
   if (parts[0] === "homework") {
-    if (parts[1]) return { page: "student-homework-detail", homeworkId: parseInt(parts[1]) };
+    if (parts[1])
+      return {
+        page: "student-homework-detail",
+        homeworkId: parseInt(parts[1]),
+      };
     return { page: "student-homework" };
   }
   return {

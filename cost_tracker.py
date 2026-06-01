@@ -30,6 +30,7 @@ CREDITS_PER_API_USD: float = 25.0
 
 PRICING: Dict[str, dict] = {
     # Chat completion models — price per 1 000 tokens
+    # Source: https://developers.openai.com/api/docs/pricing (updated June 2026)
     "gpt-4o": {
         "input_per_1k": 0.0025,
         "output_per_1k": 0.0100,
@@ -38,11 +39,19 @@ PRICING: Dict[str, dict] = {
         "input_per_1k": 0.00015,
         "output_per_1k": 0.0006,
     },
-    # Speech-to-text (Whisper) — price per minute of audio
+    "gpt-4.1": {
+        "input_per_1k": 0.002,
+        "output_per_1k": 0.008,
+    },
+    "gpt-4.1-mini": {
+        "input_per_1k": 0.0004,
+        "output_per_1k": 0.0016,
+    },
+    # OpenAI Speech-to-text (Whisper) — price per minute of audio (fallback only)
     "whisper-1": {
         "per_minute": 0.006,
     },
-    # Text-to-speech — price per 1 000 characters
+    # OpenAI Text-to-speech — price per 1 000 characters (fallback only)
     "tts-1": {
         "per_1k_chars": 0.015,
     },
@@ -50,6 +59,24 @@ PRICING: Dict[str, dict] = {
         "per_1k_chars": 0.030,
     },
 }
+
+# ── ElevenLabs pricing (USD) ───────────────────────────────────
+# Source: https://elevenlabs.io/pricing/api (updated June 2026)
+ELEVENLABS_TTS_PER_1K_CHARS: Dict[str, float] = {
+    "eleven_multilingual_v2": 0.10,  # $0.10 / 1k chars
+    "eleven_multilingual_v3": 0.10,
+    "eleven_flash_v2": 0.05,
+    "eleven_turbo_v2": 0.05,
+}
+ELEVENLABS_TTS_DEFAULT_PER_1K: float = 0.10
+
+# Scribe v1/v2: $0.22 / hour  →  $0.22 / 3600 s  ≈  $0.0000611 / s
+ELEVENLABS_STT_PER_SECOND: Dict[str, float] = {
+    "scribe_v1": 0.22 / 3600,
+    "scribe_v2": 0.22 / 3600,
+    "scribe_v2_realtime": 0.39 / 3600,
+}
+ELEVENLABS_STT_DEFAULT_PER_SECOND: float = 0.22 / 3600
 
 
 # ── Pure cost calculators ───────────────────────────────────────
@@ -377,6 +404,44 @@ class TrackedOpenAI:
         self.audio = _TrackedAudio(self._real_client, self)
 
     # ── Internal: atomic log + deduct ──────────────────────────
+
+    def record_elevenlabs_tts(
+        self, characters: int, model: str = "eleven_multilingual_v2"
+    ) -> float:
+        """Record an ElevenLabs TTS call and deduct credits. Returns cost in USD."""
+        rate = ELEVENLABS_TTS_PER_1K_CHARS.get(model, ELEVENLABS_TTS_DEFAULT_PER_1K)
+        cost = round((characters / 1000) * rate, 8)
+        self._record_and_deduct(
+            model=f"elevenlabs/{model}",
+            input_tokens=0,
+            output_tokens=0,
+            audio_seconds=0,
+            characters=characters,
+            cost=cost,
+        )
+        logger.info(
+            f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} (ElevenLabs TTS {characters} chars){Colors.END}"
+        )
+        return cost
+
+    def record_elevenlabs_stt(
+        self, audio_seconds: float, model: str = "scribe_v1"
+    ) -> float:
+        """Record an ElevenLabs STT call and deduct credits. Returns cost in USD."""
+        rate = ELEVENLABS_STT_PER_SECOND.get(model, ELEVENLABS_STT_DEFAULT_PER_SECOND)
+        cost = round(audio_seconds * rate, 8)
+        self._record_and_deduct(
+            model=f"elevenlabs/{model}",
+            input_tokens=0,
+            output_tokens=0,
+            audio_seconds=audio_seconds,
+            characters=0,
+            cost=cost,
+        )
+        logger.info(
+            f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} (ElevenLabs STT {audio_seconds:.1f}s){Colors.END}"
+        )
+        return cost
 
     def _record_and_deduct(
         self,

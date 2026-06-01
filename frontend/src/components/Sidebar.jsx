@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
-import { getLanguageEmoji, getLanguageSlug } from "../utils.jsx";
+import { getLanguageEmoji, getLanguageSlug, LangFlag } from "../utils.jsx";
 
 function LanguageSwitcher() {
   const {
@@ -45,14 +45,14 @@ function LanguageSwitcher() {
   }
 
   const label = currentLanguageName || "Select Language";
-  const emoji = currentLanguageName
-    ? getLanguageEmoji(currentLanguageName)
-    : "🌍";
 
   return (
     <div className="lang-switcher" ref={ref}>
       <button className="lang-switcher-btn" onClick={() => setOpen((o) => !o)}>
-        <span className="text-lg">{emoji}</span>
+        <LangFlag
+          name={currentLanguageName || ""}
+          style={{ fontSize: "1.125rem" }}
+        />
         <span className="flex-1 text-left truncate">{label}</span>
         <svg
           className="w-4 h-4 shrink-0 transition-transform"
@@ -102,7 +102,7 @@ function LanguageSwitcher() {
                 }}
                 onClick={() => switchLanguage(lang)}
               >
-                <span className="text-lg">{getLanguageEmoji(lang.name)}</span>
+                <LangFlag name={lang.name} style={{ fontSize: "1.125rem" }} />
                 <span>{lang.name}</span>
               </div>
               <span
@@ -450,14 +450,14 @@ function LanguageSwitcherWithAdd() {
   }
 
   const label = currentLanguageName || "Select Language";
-  const emoji = currentLanguageName
-    ? getLanguageEmoji(currentLanguageName)
-    : "🌍";
 
   return (
     <div className="lang-switcher" ref={ref}>
       <button className="lang-switcher-btn" onClick={() => setOpen((o) => !o)}>
-        <span className="text-lg">{emoji}</span>
+        <LangFlag
+          name={currentLanguageName || ""}
+          style={{ fontSize: "1.125rem" }}
+        />
         <span className="flex-1 text-left truncate">{label}</span>
         <svg
           className="w-4 h-4 shrink-0 transition-transform"
@@ -498,7 +498,7 @@ function LanguageSwitcherWithAdd() {
               }}
               onClick={() => switchLanguage(lang)}
             >
-              <span className="text-lg">{getLanguageEmoji(lang.name)}</span>
+              <LangFlag name={lang.name} style={{ fontSize: "1.125rem" }} />
               <span>{lang.name}</span>
             </div>
             <span

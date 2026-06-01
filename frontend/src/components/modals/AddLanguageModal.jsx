@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { getLanguageEmoji, getLanguageSlug } from "../../utils.jsx";
+import { getLanguageEmoji, getLanguageSlug, LangFlag } from "../../utils.jsx";
 
 export default function AddLanguageModal() {
   const {
@@ -79,7 +79,9 @@ export default function AddLanguageModal() {
                 onClick={() => setSelected(lang)}
                 className={`add-lang-option card rounded-xl p-4 text-center cursor-pointer hover:bg-[#f1f4f3] transition-all ${selected === lang ? "selected" : ""}`}
               >
-                <div className="text-2xl mb-1">{getLanguageEmoji(lang)}</div>
+                <div className="text-2xl mb-1">
+                  <LangFlag name={lang} style={{ fontSize: "1.5rem" }} />
+                </div>
                 <div className="font-medium text-sm">{lang}</div>
               </div>
             ))}

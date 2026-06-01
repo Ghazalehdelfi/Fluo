@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import CreditIcon from "../components/CreditIcon";
-import { getLanguageEmoji } from "../utils.jsx";
+import { getLanguageEmoji, LangFlag } from "../utils.jsx";
 import { useApp } from "../context/AppContext.jsx";
 
 export default function UploadPage() {
@@ -29,8 +29,8 @@ export default function UploadPage() {
   function handleDrop(e) {
     e.preventDefault();
     if (dropZoneRef.current) dropZoneRef.current.style.borderColor = "";
-    const files = Array.from(e.dataTransfer.files).filter((f) =>
-      f.type.startsWith("image/"),
+    const files = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type.startsWith("image/") || f.type === "application/pdf",
     );
     if (files.length > 0) setSelectedFiles(files);
   }
@@ -182,7 +182,7 @@ export default function UploadPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               className="hidden"
               multiple
               onChange={handleFileSelect}
@@ -199,8 +199,8 @@ export default function UploadPage() {
               Drop your files here
             </h3>
             <p className="text-[#596060] max-w-xs mb-8">
-              PDF, DOCX, or JPEG. Our AI will extract the essence of your
-              learning material.
+              PDF or image (JPEG, PNG, etc.). Our AI will extract the essence of
+              your learning material.
             </p>
             <button
               className="bg-[#e4e9e8] text-[#596060] px-8 py-3 rounded-full font-medium hover:bg-[#dde4e3] transition-colors"
@@ -266,9 +266,10 @@ export default function UploadPage() {
             </h3>
             <div className="bg-white rounded-xl py-4 px-5 flex items-center gap-3">
               <span className="text-2xl">
-                {currentLanguageName
-                  ? getLanguageEmoji(currentLanguageName)
-                  : "🌍"}
+                <LangFlag
+                  name={currentLanguageName || ""}
+                  style={{ fontSize: "1.5rem" }}
+                />
               </span>
               <div>
                 <div className="font-semibold" style={{ color: "var(--dark)" }}>
@@ -294,7 +295,7 @@ export default function UploadPage() {
               }}
             >
               <span className="material-symbols-outlined">auto_fix_high</span>
-              Extract from Images
+              Extract from File
               <CreditIcon />
             </button>
             <button

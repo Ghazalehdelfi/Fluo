@@ -814,6 +814,8 @@ Be warm, encouraging, and ask a natural follow-up question when appropriate."""
                 logger.info(
                     f"   {Colors.GREEN}✓ Audio generated:{Colors.END} {len(audio_bytes) / 1024:.1f} KB"
                 )
+                if hasattr(self.client, "record_elevenlabs_tts"):
+                    self.client.record_elevenlabs_tts(len(clean_text), self.tts_model)
                 return audio_bytes
             except Exception as e:
                 logger.error(f"   {Colors.RED}✗ ElevenLabs TTS error: {e}{Colors.END}")
@@ -854,6 +856,9 @@ Be warm, encouraging, and ask a natural follow-up question when appropriate."""
                 )
                 text = response.text
                 logger.info(f"   {Colors.GREEN}✓ Transcribed:{Colors.END} {text}")
+                audio_seconds = len(audio_bytes) / 16000  # ~16kbps estimate
+                if hasattr(self.client, "record_elevenlabs_stt"):
+                    self.client.record_elevenlabs_stt(audio_seconds, self.stt_model)
                 return text
             except Exception as e:
                 logger.error(f"   {Colors.RED}✗ ElevenLabs STT error: {e}{Colors.END}")
