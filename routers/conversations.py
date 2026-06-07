@@ -467,6 +467,6 @@ async def end_conversation(
     return {
         "conversation_id": conversation_id,
         "transcript": transcript,
-        "analysis": analysis,
+        "analysis": {**analysis, "overall_feedback": overall_feedback},
         "fluency_updates": updates,
     }

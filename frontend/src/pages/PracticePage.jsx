@@ -194,7 +194,7 @@ export default function PracticePage() {
         return;
       }
       const data = await resp.json();
-      setAnalysis(data);
+      setAnalysis(data.analysis);
       setView("analysis");
     } catch (e) {
       console.error(e);
@@ -532,7 +532,7 @@ export default function PracticePage() {
           <p className="text-[#596060] mt-2">Here's how you did</p>
         </header>
 
-        {analysis.overall_assessment && (
+        {analysis.overall_feedback && (
           <div
             className="rounded-2xl p-8 mb-8"
             style={{
@@ -544,23 +544,23 @@ export default function PracticePage() {
               className="font-bold text-lg mb-3"
               style={{ color: "var(--dark)" }}
             >
-              Overall Assessment
+              Overall Feedback
             </h3>
-            <p className="text-[#596060]">{analysis.overall_assessment}</p>
+            <p className="text-[#596060]">{analysis.overall_feedback}</p>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-6 mb-8">
-          {analysis.strengths && analysis.strengths.length > 0 && (
+          {analysis.correct_words && analysis.correct_words.length > 0 && (
             <div
               className="rounded-2xl p-6"
               style={{ background: "var(--tertiary-container)" }}
             >
               <h3 className="font-bold mb-3" style={{ color: "#166534" }}>
-                Strengths
+                Words Used Correctly
               </h3>
               <ul className="space-y-2">
-                {analysis.strengths.map((s, i) => (
+                {analysis.correct_words.map((w, i) => (
                   <li key={i} className="flex gap-2 text-sm">
                     <span
                       className="material-symbols-outlined text-base"
@@ -571,61 +571,97 @@ export default function PracticePage() {
                     >
                       check_circle
                     </span>
-                    {s}
+                    <span>
+                      <strong>{w.word}</strong>
+                      {w.translation ? ` — ${w.translation}` : ""}
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-          {analysis.areas_for_improvement &&
-            analysis.areas_for_improvement.length > 0 && (
-              <div
-                className="rounded-2xl p-6"
-                style={{ background: "var(--surface-container-low)" }}
-              >
-                <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
-                  Areas to Improve
-                </h3>
-                <ul className="space-y-2">
-                  {analysis.areas_for_improvement.map((a, i) => (
-                    <li key={i} className="flex gap-2 text-sm">
-                      <span
-                        className="material-symbols-outlined text-base"
-                        style={{ color: "var(--primary)" }}
-                      >
-                        arrow_forward
-                      </span>
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          {analysis.incorrect_words && analysis.incorrect_words.length > 0 && (
+            <div
+              className="rounded-2xl p-6"
+              style={{ background: "var(--surface-container-low)" }}
+            >
+              <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
+                Words to Improve
+              </h3>
+              <ul className="space-y-2">
+                {analysis.incorrect_words.map((w, i) => (
+                  <li key={i} className="flex gap-2 text-sm">
+                    <span
+                      className="material-symbols-outlined text-base"
+                      style={{ color: "var(--primary)" }}
+                    >
+                      arrow_forward
+                    </span>
+                    <span>
+                      <strong>{w.word}</strong>
+                      {w.correction ? ` → ${w.correction}` : ""}
+                      {w.explanation ? (
+                        <em className="block text-xs text-[#596060]">
+                          {w.explanation}
+                        </em>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
-        {analysis.vocabulary_used && analysis.vocabulary_used.length > 0 && (
+        {analysis.correct_grammar && analysis.correct_grammar.length > 0 && (
           <div
-            className="rounded-2xl p-6 mb-8"
+            className="rounded-2xl p-6 mb-6"
             style={{
               background: "var(--white)",
               boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
             }}
           >
             <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
-              Vocabulary Reviewed
+              Grammar Used Well
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {analysis.vocabulary_used.map((v, i) => (
-                <span
-                  key={i}
-                  className="bg-[#eaefee] px-3 py-1.5 rounded-lg text-sm"
-                >
-                  {v}
-                </span>
+            <ul className="space-y-2">
+              {analysis.correct_grammar.map((g, i) => (
+                <li key={i} className="text-sm">
+                  <strong>{g.pattern}</strong>
+                  {g.example ? `: "${g.example}"` : ""}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
+
+        {analysis.incorrect_grammar &&
+          analysis.incorrect_grammar.length > 0 && (
+            <div
+              className="rounded-2xl p-6 mb-8"
+              style={{
+                background: "var(--white)",
+                boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
+              }}
+            >
+              <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
+                Grammar to Review
+              </h3>
+              <ul className="space-y-2">
+                {analysis.incorrect_grammar.map((g, i) => (
+                  <li key={i} className="text-sm">
+                    <strong>{g.pattern}</strong>: "{g.student_said}" → "
+                    {g.correction}"
+                    {g.explanation ? (
+                      <em className="block text-xs text-[#596060]">
+                        {g.explanation}
+                      </em>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
         <div className="flex gap-3">
           <button
