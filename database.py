@@ -18,7 +18,12 @@ from datetime import datetime
 DATABASE_URL = os.environ["DATABASE_URL"]  # PostgreSQL connection string (Supabase)
 
 engine = create_engine(
-    DATABASE_URL, connect_args={"sslmode": "require"}, pool_pre_ping=False
+    DATABASE_URL,
+    connect_args={"sslmode": "require"},
+    pool_pre_ping=True,    # detect and discard stale connections before use
+    pool_size=5,           # base connections kept open
+    max_overflow=5,        # up to 10 total (safe under Supabase free tier's 60-conn limit)
+    pool_recycle=1800,     # recycle connections every 30 min to avoid server-side timeouts
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

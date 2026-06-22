@@ -1,6 +1,7 @@
 """Placement test routes: /api/placement-test/*."""
 
 import json
+import time
 import uuid
 import logging
 from typing import List, Dict
@@ -12,7 +13,7 @@ from database import User, Language, Settings, Vocabulary, Grammar, SessionLocal
 from auth import get_current_user
 from cost_tracker import TrackedOpenAI, check_sufficient_credits
 from dependencies import get_db, get_api_key, get_native_language
-from session_store import active_sessions
+from session_store import active_sessions, SESSION_TTL_SECONDS
 from agents.placement_agent import (
     PlacementTestAgent,
     CEFR_LEVELS,
@@ -113,6 +114,7 @@ async def placement_test_start(
         "results": [],
         "determined_level": None,
         "generated_content": None,
+        "_expires_at": time.time() + SESSION_TTL_SECONDS,
     }
 
     logger.info(

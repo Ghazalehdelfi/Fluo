@@ -2,13 +2,14 @@
 
 import os
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import User, ClassStudent
 from auth import hash_password, verify_password, create_access_token
 from dependencies import get_db
+from rate_limiter import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,7 +27,8 @@ class AuthLogin(BaseModel):
 
 
 @router.post("/api/auth/register")
-async def register(body: AuthRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, body: AuthRegister, db: Session = Depends(get_db)):
     """Create a new account and return a JWT for immediate access."""
     email = body.email.strip()
     if len(email) < 3:
@@ -68,7 +70,8 @@ async def register(body: AuthRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/api/auth/login")
-async def login(body: AuthLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, body: AuthLogin, db: Session = Depends(get_db)):
     """Login and receive a JWT."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user or not verify_password(body.password, user.hashed_password):

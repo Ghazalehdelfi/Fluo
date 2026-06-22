@@ -8,6 +8,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Request,
     UploadFile,
     File,
     Form,
@@ -34,11 +35,13 @@ from dependencies import (
     get_user_level,
     get_elevenlabs_client,
 )
-from session_store import active_sessions
+import time
+from session_store import active_sessions, SESSION_TTL_SECONDS
 from tasks import rebuild_topics
 from agents.dialogue_agent import DialogueAgent
 from agents.analysis_agent import AnalysisAgent
 from agents.logging_utils import Colors, get_logger, log_api_call as _log_api_call
+from rate_limiter import user_limiter
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -130,7 +133,9 @@ async def rebuild_conversation_topics(
 
 
 @router.post("/api/start-lesson/{language_id}")
+@user_limiter.limit("10/minute")
 async def start_lesson(
+    request: Request,
     language_id: int,
     topic_id: Optional[int] = None,
     num_vocab: int = 5,
@@ -272,6 +277,7 @@ async def start_lesson(
         "all_known_items": all_known_items,
         "tracked_client": tracked_client,
         "user_id": user.id,
+        "_expires_at": time.time() + SESSION_TTL_SECONDS,
     }
 
     logger.info(f"\n{Colors.GREEN}✅ Session created: {session_id[:8]}...{Colors.END}")
@@ -294,7 +300,9 @@ class ScenarioRequest(BaseModel):
 
 
 @router.post("/api/start-scenario/{language_id}")
+@user_limiter.limit("10/minute")
 async def start_scenario(
+    request: Request,
     language_id: int,
     body: ScenarioRequest,
     user: User = Depends(get_current_user),
@@ -353,6 +361,7 @@ async def start_scenario(
         "all_known_items": all_known_items,
         "tracked_client": tracked_client,
         "user_id": user.id,
+        "_expires_at": time.time() + SESSION_TTL_SECONDS,
     }
 
     logger.info(
@@ -373,7 +382,9 @@ async def start_scenario(
 
 
 @router.post("/api/conversation/{session_id}/respond")
+@user_limiter.limit("60/minute")
 async def respond_to_conversation(
+    request: Request,
     session_id: str,
     audio: Optional[UploadFile] = File(None),
     text: Optional[str] = Form(None),

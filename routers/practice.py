@@ -1,9 +1,10 @@
 """Grammar practice session routes."""
 
 import uuid
+import time
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -11,9 +12,10 @@ from database import User, Language, Grammar, SessionLocal
 from auth import get_current_user
 from cost_tracker import TrackedOpenAI, check_sufficient_credits
 from dependencies import get_db, get_api_key, get_native_language, get_user_level
-from session_store import grammar_practice_sessions
+from session_store import grammar_practice_sessions, SESSION_TTL_SECONDS
 from agents.grammar_practice_agent import GrammarPracticeAgent
 from agents.logging_utils import get_logger, log_api_call as _log_api_call
+from rate_limiter import user_limiter
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -29,7 +31,9 @@ class GrammarPracticeAnswerBody(BaseModel):
 
 
 @router.post("/api/grammar/{grammar_id}/start-practice")
+@user_limiter.limit("30/minute")
 async def start_grammar_practice(
+    request: Request,
     grammar_id: int,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -96,6 +100,7 @@ async def start_grammar_practice(
         "questions": questions,
         "answers": {},
         "correct_count": 0,
+        "_expires_at": time.time() + SESSION_TTL_SECONDS,
     }
 
     return {

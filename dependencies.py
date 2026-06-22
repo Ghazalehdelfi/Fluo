@@ -2,6 +2,7 @@
 
 import os
 import logging
+import threading
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal
@@ -14,19 +15,47 @@ except ImportError:
     _ElevenLabs = None
 
 
+# ── OpenAI API key rotation ───────────────────────────────────────
+# Set OPENAI_API_KEYS as a comma-separated list of keys to enable rotation.
+# Falls back to OPENAI_API_KEY (single key) for backwards compatibility.
+
+def _load_openai_keys() -> list[str]:
+    multi = os.getenv("OPENAI_API_KEYS", "")
+    if multi:
+        keys = [k.strip() for k in multi.split(",") if k.strip()]
+        if keys:
+            return keys
+    single = os.getenv("OPENAI_API_KEY", "")
+    return [single] if single else []
+
+
+_openai_keys: list[str] = _load_openai_keys()
+_key_index: int = 0
+_key_lock = threading.Lock()
+
+
+def get_api_key() -> str:
+    """Return the next OpenAI API key in round-robin order.
+
+    Configure multiple keys via OPENAI_API_KEYS (comma-separated) or a single
+    key via OPENAI_API_KEY.  Keys are refreshed from the environment on the
+    first call; restart the process to pick up new keys.
+    """
+    global _key_index
+    if not _openai_keys:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+    with _key_lock:
+        key = _openai_keys[_key_index % len(_openai_keys)]
+        _key_index = (_key_index + 1) % len(_openai_keys)
+    return key
+
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
-
-def get_api_key() -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-    return api_key
 
 
 def get_elevenlabs_client():

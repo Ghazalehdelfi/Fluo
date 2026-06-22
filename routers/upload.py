@@ -8,6 +8,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Request,
     UploadFile,
     File,
     Form,
@@ -29,6 +30,7 @@ from grammar_utils import (
 from tasks import rebuild_topics
 from agents.note_extractor import NoteExtractorAgent
 from agents.logging_utils import Colors, get_logger
+from rate_limiter import user_limiter
 
 try:
     from pypdf import PdfReader
@@ -42,7 +44,9 @@ router = APIRouter()
 
 
 @router.post("/api/upload-notes")
+@user_limiter.limit("30/minute")
 async def upload_notes(
+    request: Request,
     language_id: str = Form(...),
     files: List[UploadFile] = File(default=[]),
     text: Optional[str] = Form(default=None),
