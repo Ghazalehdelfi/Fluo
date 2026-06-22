@@ -33,7 +33,6 @@ SUPPORTED_LANGUAGES = {
     "Korean": "kr",
     "Japanese": "jp",
     "German": "de",
-    "English": "en",
 }
 
 # Native language options

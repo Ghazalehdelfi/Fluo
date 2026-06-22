@@ -3,11 +3,10 @@ export function getLanguageEmoji(name) {
     Turkish: "🇹🇷",
     Spanish: "🇪🇸",
     French: "🇫🇷",
-    Persian: "🦱",
+    Persian: "🇮🇷",
     Korean: "🇰🇷",
     Japanese: "🇯🇵",
     German: "🇩🇪",
-    English: "🇬🇧",
   };
   return emojis[name] || "🌍";
 }

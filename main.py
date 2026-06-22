@@ -87,6 +87,11 @@ async def serve_favicon():
     return FileResponse("static/favicon.svg", media_type="image/svg+xml")
 
 
+@app.get("/iran.png")
+async def serve_iran_flag():
+    return FileResponse("static/iran.png", media_type="image/png")
+
+
 @app.get("/{path:path}", response_class=HTMLResponse)
 async def serve_spa(path: str):
     """Serve the frontend for any non-API route (SPA routing)."""

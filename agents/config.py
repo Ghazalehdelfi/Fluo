@@ -15,6 +15,11 @@ TTS_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"
 # Per-language voice overrides (takes priority over TTS_VOICE_ID when matched)
 TTS_VOICE_ID_BY_LANGUAGE: dict = {
     "Turkish": "Q5n6GDIjpN0pLOlycRFT",
+    "Spanish": "FXGrCtY3PEyfqczBAlqm",
+    "French": "aQROLel5sQbj1vuIVi6B",
+    "Korean": "uyVNoMrnUku1dZyVEXwD",
+    "Japanese": "3JDquces8E8bkmvbh6Bc",
+    "German": "FTNCalFNG5bRnkkaP5Ug",
 }
 # STT: Scribe v1 — ElevenLabs speech-to-text with strong multilingual accuracy
 STT_MODEL = "scribe_v1"
