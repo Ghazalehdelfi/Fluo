@@ -42,6 +42,13 @@ $SSH_CMD "
 
 echo "[3/3] Restarting container..."
 $SSH_CMD "
+    # Copy ubuntu's AWS credentials to root so the Docker daemon (runs as root)
+    # can authenticate with CloudWatch Logs via the awslogs driver.
+    sudo mkdir -p /root/.aws
+    sudo cp /home/${SSH_USER}/.aws/credentials /root/.aws/credentials 2>/dev/null || true
+    sudo cp /home/${SSH_USER}/.aws/config /root/.aws/config 2>/dev/null || true
+    sudo chmod 600 /root/.aws/credentials 2>/dev/null || true
+
     sudo docker rm -f ${APP_NAME} 2>/dev/null || true
     sudo docker run -d \
         --name ${APP_NAME} \
@@ -49,6 +56,11 @@ $SSH_CMD "
         -p 127.0.0.1:8000:8000 \
         -e AWS_REGION=${REGION} \
         -v /home/${SSH_USER}/.aws:/root/.aws:ro \
+        --log-driver=awslogs \
+        --log-opt awslogs-region=${REGION} \
+        --log-opt awslogs-group=/fluo/backend \
+        --log-opt awslogs-stream=backend \
+        --log-opt awslogs-create-group=true \
         ${ECR_URI}:latest
 "
 
