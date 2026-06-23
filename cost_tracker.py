@@ -44,7 +44,7 @@ def _get_langfuse():
         try:
             from langfuse import Langfuse
 
-            host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+            host = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
             _langfuse_client = Langfuse(public_key=pk, secret_key=sk, host=host)
             logger.info("   Langfuse observability enabled")
         except Exception as exc:
@@ -311,7 +311,8 @@ class _TrackedChatCompletions:
         except Exception as exc:
             if lf_gen:
                 try:
-                    lf_gen.update(level="ERROR", status_message=str(exc))
+                    from langfuse.model import SpanLevel
+                    lf_gen.update(level=SpanLevel.ERROR, status_message=str(exc))
                 except Exception:
                     pass
             raise
@@ -390,7 +391,8 @@ class _TrackedSpeech:
         except Exception as exc:
             if lf_span:
                 try:
-                    lf_span.update(level="ERROR", status_message=str(exc))
+                    from langfuse.model import SpanLevel
+                    lf_span.update(level=SpanLevel.ERROR, status_message=str(exc))
                 except Exception:
                     pass
             raise
@@ -453,7 +455,8 @@ class _TrackedTranscriptions:
         except Exception as exc:
             if lf_span:
                 try:
-                    lf_span.update(level="ERROR", status_message=str(exc))
+                    from langfuse.model import SpanLevel
+                    lf_span.update(level=SpanLevel.ERROR, status_message=str(exc))
                 except Exception:
                     pass
             raise
