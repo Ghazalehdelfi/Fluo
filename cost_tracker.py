@@ -12,7 +12,7 @@ import os
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 
 from sqlalchemy.orm import Session
 
@@ -21,35 +21,10 @@ from agents.logging_utils import Colors, get_logger
 
 logger = get_logger(__name__)
 
-# ── Langfuse observability (optional) ───────────────────────────
-# Enabled automatically when LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY are set.
-# All LLM/TTS/STT calls traced under the session's TrackedOpenAI instance.
-
-_langfuse_client = None
-_langfuse_init_lock = threading.Lock()
-
-
-def _get_langfuse():
-    """Return a configured Langfuse client, or None if env vars are absent."""
-    global _langfuse_client
-    if _langfuse_client is not None:
-        return _langfuse_client
-    pk = os.getenv("LANGFUSE_PUBLIC_KEY")
-    sk = os.getenv("LANGFUSE_SECRET_KEY")
-    if not pk or not sk:
-        return None
-    with _langfuse_init_lock:
-        if _langfuse_client is not None:
-            return _langfuse_client
-        try:
-            from langfuse import Langfuse
-
-            host = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
-            _langfuse_client = Langfuse(public_key=pk, secret_key=sk, host=host)
-            logger.info("   Langfuse observability enabled")
-        except Exception as exc:
-            logger.warning(f"   Langfuse init failed (observability disabled): {exc}")
-    return _langfuse_client
+# ── Langfuse observability ──────────────────────────────────────
+# Uses the langfuse.openai drop-in replacement for automatic tracing.
+# Credentials are read from LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY /
+# LANGFUSE_BASE_URL environment variables (set via .env or AWS SSM).
 
 
 # 100 credits costs $5 (purchase price), but internally equals $4 of API budget.
@@ -294,28 +269,17 @@ class _TrackedChatCompletions:
 
     def create(self, **kwargs):
         model = kwargs.get("model", "gpt-4o")
-        trace = getattr(self._tracker, "_lf_trace", None)
-        lf_gen = None
-        if trace:
-            try:
-                lf_gen = trace.generation(
-                    name=f"chat/{model}",
-                    model=model,
-                    input=kwargs.get("messages"),
-                )
-            except Exception:
-                lf_gen = None
 
-        try:
-            response = self._real.create(**kwargs)
-        except Exception as exc:
-            if lf_gen:
-                try:
-                    from langfuse.model import SpanLevel
-                    lf_gen.update(level=SpanLevel.ERROR, status_message=str(exc))
-                except Exception:
-                    pass
-            raise
+        # Inject Langfuse trace attributes so all calls are grouped by session/user.
+        # langfuse.openai strips these keys before forwarding to the real API.
+        existing_meta = kwargs.get("metadata") or {}
+        kwargs["metadata"] = {
+            **existing_meta,
+            "langfuse_session_id": self._tracker.session_id,
+            "langfuse_user_id": str(self._tracker.user_id),
+        }
+
+        response = self._real.create(**kwargs)
 
         if response.usage:
             cost = calculate_chat_cost(
@@ -333,27 +297,6 @@ class _TrackedChatCompletions:
                 f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} "
                 f"({model} {response.usage.prompt_tokens}+{response.usage.completion_tokens} tok){Colors.END}"
             )
-            if lf_gen:
-                try:
-                    output_text = (
-                        response.choices[0].message.content
-                        if response.choices
-                        else None
-                    )
-                    lf_gen.end(
-                        output=output_text,
-                        usage={
-                            "input": response.usage.prompt_tokens,
-                            "output": response.usage.completion_tokens,
-                        },
-                    )
-                except Exception:
-                    pass
-        elif lf_gen:
-            try:
-                lf_gen.end()
-            except Exception:
-                pass
         return response
 
 
@@ -372,30 +315,17 @@ class _TrackedSpeech:
         self._tracker = tracker
 
     def create(self, **kwargs):
+        from langfuse import propagate_attributes
+
         model = kwargs.get("model", "tts-1")
         input_text = kwargs.get("input", "")
         characters = len(input_text)
-        trace = getattr(self._tracker, "_lf_trace", None)
-        lf_span = None
-        if trace:
-            try:
-                lf_span = trace.span(
-                    name="openai-tts",
-                    input={"model": model, "characters": characters},
-                )
-            except Exception:
-                lf_span = None
 
-        try:
+        with propagate_attributes(
+            session_id=self._tracker.session_id,
+            user_id=str(self._tracker.user_id),
+        ):
             response = self._real.create(**kwargs)
-        except Exception as exc:
-            if lf_span:
-                try:
-                    from langfuse.model import SpanLevel
-                    lf_span.update(level=SpanLevel.ERROR, status_message=str(exc))
-                except Exception:
-                    pass
-            raise
 
         cost = calculate_tts_cost(characters, model)
         self._tracker._record_and_deduct(
@@ -407,14 +337,9 @@ class _TrackedSpeech:
             cost=cost,
         )
         logger.info(
-            f"   {Colors.YELLOW}💰 Cost: ${cost:.6f}"
+            f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} "
             f"({model} {characters} chars){Colors.END}"
         )
-        if lf_span:
-            try:
-                lf_span.end(output={"cost_usd": cost})
-            except Exception:
-                pass
         return response
 
 
@@ -426,6 +351,8 @@ class _TrackedTranscriptions:
         self._tracker = tracker
 
     def create(self, **kwargs):
+        from langfuse import propagate_attributes
+
         # Estimate audio duration from file size before the call
         file_obj = kwargs.get("file")
         estimated_seconds = 0.0
@@ -439,27 +366,12 @@ class _TrackedTranscriptions:
                 file_obj.seek(pos)
 
         model = kwargs.get("model", "whisper-1")
-        trace = getattr(self._tracker, "_lf_trace", None)
-        lf_span = None
-        if trace:
-            try:
-                lf_span = trace.span(
-                    name="openai-stt",
-                    input={"model": model, "estimated_seconds": estimated_seconds},
-                )
-            except Exception:
-                lf_span = None
 
-        try:
+        with propagate_attributes(
+            session_id=self._tracker.session_id,
+            user_id=str(self._tracker.user_id),
+        ):
             response = self._real.create(**kwargs)
-        except Exception as exc:
-            if lf_span:
-                try:
-                    from langfuse.model import SpanLevel
-                    lf_span.update(level=SpanLevel.ERROR, status_message=str(exc))
-                except Exception:
-                    pass
-            raise
 
         cost = calculate_stt_cost(estimated_seconds, model)
         self._tracker._record_and_deduct(
@@ -474,13 +386,6 @@ class _TrackedTranscriptions:
             f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} "
             f"({model} {estimated_seconds:.1f}s){Colors.END}"
         )
-        if lf_span:
-            try:
-                lf_span.end(
-                    output={"transcript": getattr(response, "text", None), "cost_usd": cost}
-                )
-            except Exception:
-                pass
         return response
 
 
@@ -514,10 +419,13 @@ class TrackedOpenAI:
         user_id: int,
         session_id: str,
         db_factory,
-        trace_name: str = "api-session",
-        metadata: Optional[dict] = None,
     ):
-        from openai import OpenAI as _OpenAI
+        # Use the langfuse.openai drop-in replacement so every OpenAI call is
+        # automatically traced. Falls back gracefully when keys are absent.
+        try:
+            from langfuse.openai import OpenAI as _OpenAI
+        except Exception:
+            from openai import OpenAI as _OpenAI
 
         self._real_client = _OpenAI(api_key=api_key)
         self.user_id = user_id
@@ -530,20 +438,6 @@ class TrackedOpenAI:
         # Expose proxied API namespaces
         self.chat = _TrackedChat(self._real_client, self)
         self.audio = _TrackedAudio(self._real_client, self)
-
-        # Langfuse trace — created once per TrackedOpenAI instance (= one request/session)
-        self._lf_trace = None
-        lf = _get_langfuse()
-        if lf:
-            try:
-                self._lf_trace = lf.trace(
-                    name=trace_name,
-                    user_id=str(user_id),
-                    session_id=session_id,
-                    metadata=metadata or {},
-                )
-            except Exception as exc:
-                logger.debug(f"Langfuse trace creation failed: {exc}")
 
     # ── Internal: atomic log + deduct ──────────────────────────
 
@@ -564,14 +458,6 @@ class TrackedOpenAI:
         logger.info(
             f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} (ElevenLabs TTS {characters} chars){Colors.END}"
         )
-        if self._lf_trace:
-            try:
-                self._lf_trace.event(
-                    name="elevenlabs-tts",
-                    metadata={"model": f"elevenlabs/{model}", "characters": characters, "cost_usd": cost},
-                )
-            except Exception:
-                pass
         return cost
 
     def record_elevenlabs_stt(
@@ -591,14 +477,6 @@ class TrackedOpenAI:
         logger.info(
             f"   {Colors.YELLOW}💰 Cost: ${cost:.6f} (ElevenLabs STT {audio_seconds:.1f}s){Colors.END}"
         )
-        if self._lf_trace:
-            try:
-                self._lf_trace.event(
-                    name="elevenlabs-stt",
-                    metadata={"model": f"elevenlabs/{model}", "audio_seconds": audio_seconds, "cost_usd": cost},
-                )
-            except Exception:
-                pass
         return cost
 
     def _record_and_deduct(

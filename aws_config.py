@@ -22,5 +22,9 @@ def load_secrets(prefix="/vocab-practice"):
                 key = param["Name"].rsplit("/", 1)[-1]
                 os.environ[key] = param["Value"]
     except (NoCredentialsError, ClientError):
-        # No AWS credentials available — local dev, use .env instead
-        pass
+        # No AWS credentials available — local dev, load .env instead
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass

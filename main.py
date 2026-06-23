@@ -63,13 +63,11 @@ async def lifespan(app: FastAPI):
     yield
     task.cancel()
     # Flush any pending Langfuse events before the process exits
-    from cost_tracker import _get_langfuse
-    lf = _get_langfuse()
-    if lf:
-        try:
-            lf.flush()
-        except Exception:
-            pass
+    try:
+        from langfuse import get_client
+        get_client().flush()
+    except Exception:
+        pass
 
 
 app = FastAPI(title="Language Learning App", lifespan=lifespan)
