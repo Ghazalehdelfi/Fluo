@@ -8,6 +8,8 @@ import logging
 import re
 import sys
 
+_retry_logger = logging.getLogger(__name__)
+
 
 # ANSI color codes for terminal output
 class Colors:
@@ -144,7 +146,17 @@ def call_llm_with_json(
         response = create_fn(**call_kwargs)
         try:
             return parse_json_response(response.choices[0].message)
-        except ValueError as exc:
+        except (ValueError, json.JSONDecodeError) as exc:
+            # ValueError: empty/refused content. JSONDecodeError: truncated or
+            # malformed JSON (e.g. hit max_completion_tokens mid-string).
+            finish = getattr(response.choices[0], "finish_reason", None)
+            _retry_logger.warning(
+                "LLM JSON parse failed (attempt %d/%d, finish_reason=%s): %s",
+                attempt + 1,
+                max_retries,
+                finish,
+                exc,
+            )
             last_error = exc
     raise last_error
 

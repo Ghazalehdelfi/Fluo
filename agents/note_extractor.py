@@ -78,7 +78,7 @@ class NoteExtractorAgent:
                     ],
                 }
             ],
-            max_completion_tokens=4096,
+            max_completion_tokens=16384,
             response_format={"type": "json_object"},
         )
         vocab = result.get("vocabulary", [])
@@ -99,7 +99,7 @@ class NoteExtractorAgent:
             self.client.chat.completions.create,
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=4096,
+            max_completion_tokens=16384,
             response_format={"type": "json_object"},
         )
         vocab = result.get("vocabulary", [])

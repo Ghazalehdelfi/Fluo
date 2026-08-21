@@ -39,8 +39,85 @@ try:
 except ImportError:
     _HAS_PYPDF = False
 
+try:
+    import pymupdf  # PyMuPDF — renders PDF pages to images
+
+    _HAS_PYMUPDF = True
+except ImportError:
+    _HAS_PYMUPDF = False
+
 logger = get_logger(__name__)
 router = APIRouter()
+
+# Minimum chars of extractable text before a PDF is treated as text-based.
+# Below this, the PDF is assumed scanned/handwritten → vision fallback.
+_MIN_PDF_TEXT_CHARS = 20
+# Max pages to send through vision extraction (cost guard).
+_MAX_VISION_PAGES = 10
+
+
+def _process_pdf(
+    filename: str, contents: bytes, extractor: NoteExtractorAgent
+):
+    """Extract vocabulary/grammar from a PDF.
+
+    Uses the embedded text layer when present; falls back to rendering pages
+    as images and using vision extraction for scanned/handwritten PDFs.
+    """
+    if not _HAS_PYPDF:
+        raise HTTPException(status_code=500, detail="PDF support not available")
+
+    pdf_text = ""
+    try:
+        reader = PdfReader(io.BytesIO(contents))
+        pdf_text = "\n".join(
+            page.extract_text() or "" for page in reader.pages
+        ).strip()
+    except Exception as exc:
+        logger.warning(f"      pypdf text extraction failed for {filename}: {exc}")
+    logger.info(f"      Extracted {len(pdf_text)} chars from PDF")
+
+    if len(pdf_text) >= _MIN_PDF_TEXT_CHARS:
+        return extractor.extract_from_text(pdf_text)
+
+    # No usable text layer → scanned/handwritten PDF → vision fallback
+    if not _HAS_PYMUPDF:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Could not extract text from PDF: {filename}. It may be "
+                "scanned or handwritten, and PDF image support is not installed."
+            ),
+        )
+
+    logger.info(
+        "      No text layer found — falling back to vision extraction (page images)"
+    )
+    all_vocab: list = []
+    all_grammar: list = []
+    with pymupdf.open(stream=contents, filetype="pdf") as doc:
+        page_count = min(len(doc), _MAX_VISION_PAGES)
+        if len(doc) > _MAX_VISION_PAGES:
+            logger.warning(
+                f"      PDF has {len(doc)} pages; processing first {_MAX_VISION_PAGES} only"
+            )
+        for page_num in range(page_count):
+            pix = doc[page_num].get_pixmap(dpi=200)
+            png_bytes = pix.tobytes("png")
+            logger.info(
+                f"      Vision extraction: page {page_num + 1}/{page_count} "
+                f"({len(png_bytes)} bytes)"
+            )
+            vocab, grammar = extractor.extract_from_image(png_bytes, "image/png")
+            all_vocab.extend(vocab)
+            all_grammar.extend(grammar)
+
+    if not all_vocab and not all_grammar:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not extract any content from PDF: {filename}",
+        )
+    return all_vocab, all_grammar
 
 
 @router.post("/api/upload-notes")
@@ -99,21 +176,9 @@ async def upload_notes(
             mime_type = file.content_type or "application/octet-stream"
             try:
                 if mime_type == "application/pdf":
-                    if not _HAS_PYPDF:
-                        raise HTTPException(
-                            status_code=500, detail="PDF support not available"
-                        )
-                    reader = PdfReader(io.BytesIO(contents))
-                    pdf_text = "\n".join(
-                        page.extract_text() or "" for page in reader.pages
-                    ).strip()
-                    logger.info(f"      Extracted {len(pdf_text)} chars from PDF")
-                    if not pdf_text:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Could not extract text from PDF: {file.filename}",
-                        )
-                    vocabulary, grammar = extractor.extract_from_text(pdf_text)
+                    vocabulary, grammar = _process_pdf(
+                        file.filename, contents, extractor
+                    )
                 else:
                     vocabulary, grammar = extractor.extract_from_image(
                         contents, mime_type

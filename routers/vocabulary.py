@@ -78,6 +78,38 @@ async def delete_vocabulary(
     return {"message": "Vocabulary item deleted"}
 
 
+class VocabularyUpdateModel(BaseModel):
+    target_word: Optional[str] = None
+    native_translation: Optional[str] = None
+    example_sentence: Optional[str] = None
+
+
+@router.put("/api/vocabulary/{vocab_id}")
+async def update_vocabulary(
+    vocab_id: int,
+    body: VocabularyUpdateModel,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a vocabulary item's editable fields."""
+    item = (
+        db.query(Vocabulary)
+        .join(Language)
+        .filter(Vocabulary.id == vocab_id, Language.user_id == user.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Vocabulary item not found")
+    if body.target_word is not None:
+        item.target_word = body.target_word.strip() or item.target_word
+    if body.native_translation is not None:
+        item.native_translation = body.native_translation
+    if body.example_sentence is not None:
+        item.example_sentence = body.example_sentence
+    db.commit()
+    return {"message": "Vocabulary item updated", "id": item.id}
+
+
 # ── Grammar ──────────────────────────────────────────────────────
 
 
@@ -129,6 +161,38 @@ async def delete_grammar(
     db.delete(item)
     db.commit()
     return {"message": "Grammar concept deleted"}
+
+
+class GrammarUpdateModel(BaseModel):
+    concept_name: Optional[str] = None
+    description: Optional[str] = None
+    examples: Optional[str] = None
+
+
+@router.put("/api/grammar/{grammar_id}")
+async def update_grammar(
+    grammar_id: int,
+    body: GrammarUpdateModel,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a grammar concept's editable fields."""
+    item = (
+        db.query(Grammar)
+        .join(Language)
+        .filter(Grammar.id == grammar_id, Language.user_id == user.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Grammar concept not found")
+    if body.concept_name is not None:
+        item.concept_name = body.concept_name.strip() or item.concept_name
+    if body.description is not None:
+        item.description = body.description
+    if body.examples is not None:
+        item.examples = body.examples
+    db.commit()
+    return {"message": "Grammar concept updated", "id": item.id}
 
 
 # ── Pending grammar resolution ────────────────────────────────────

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import CreditIcon from "../components/CreditIcon";
+import ExtractionReviewModal from "../components/modals/ExtractionReviewModal";
 import { getLanguageEmoji, LangFlag } from "../utils.jsx";
 import { useApp } from "../context/AppContext.jsx";
 
@@ -16,6 +17,8 @@ export default function UploadPage() {
   } = useApp();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadResults, setUploadResults] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const [pendingGrammar, setPendingGrammar] = useState([]);
   const [resolvingIndex, setResolvingIndex] = useState(null);
   const fileInputRef = useRef(null);
@@ -37,6 +40,7 @@ export default function UploadPage() {
 
   async function uploadImage() {
     if (selectedFiles.length === 0 || !currentLanguageId) return;
+    setUploadError(null);
     let allVocabulary = [],
       allGrammar = [],
       allPending = [],
@@ -54,6 +58,13 @@ export default function UploadPage() {
           method: "POST",
           body: formData,
         });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(
+            err.detail ||
+              `Failed to process ${selectedFiles[i].name} (${resp.status})`,
+          );
+        }
         const result = await resp.json();
         allVocabulary = allVocabulary.concat(result.vocabulary || []);
         allGrammar = allGrammar.concat(result.grammar || []);
@@ -68,12 +79,13 @@ export default function UploadPage() {
         grammar_added: totalGrammarAdded,
       });
       setPendingGrammar(allPending);
+      setShowReviewModal(true);
       invalidateCache(currentLanguageId);
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (e) {
       console.error(e);
-      alert("Error processing images");
+      setUploadError(e.message || "Error processing files");
     } finally {
       hideLoading();
     }
@@ -83,6 +95,7 @@ export default function UploadPage() {
     const textarea = document.getElementById("upload-text-input");
     const text = textarea?.value?.trim();
     if (!text || !currentLanguageId) return;
+    setUploadError(null);
     showLoading("Extracting vocabulary...");
     const formData = new FormData();
     formData.append("language_id", currentLanguageId);
@@ -92,14 +105,21 @@ export default function UploadPage() {
         method: "POST",
         body: formData,
       });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(
+          err.detail || `Failed to process text (${resp.status})`,
+        );
+      }
       const result = await resp.json();
       setUploadResults(result);
       setPendingGrammar(result.grammar_pending || []);
+      setShowReviewModal(true);
       invalidateCache(currentLanguageId);
       if (textarea) textarea.value = "";
     } catch (e) {
       console.error(e);
-      alert("Error processing text");
+      setUploadError(e.message || "Error processing text");
     } finally {
       hideLoading();
     }
@@ -462,49 +482,41 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* Upload Results */}
-      {uploadResults && (
-        <div className="mt-12">
-          <div
-            className="bg-white rounded-3xl p-8"
-            style={{ boxShadow: "0 8px 32px rgba(45,52,51,0.06)" }}
+      {/* Upload error banner */}
+      {uploadError && (
+        <div className="mt-8 bg-red-50 border border-red-200 rounded-2xl px-6 py-4 flex items-start gap-3">
+          <span
+            className="material-symbols-outlined text-red-500 shrink-0 mt-0.5"
+            style={{ fontSize: 20 }}
           >
-            <h3
-              className="text-2xl font-bold tracking-tight mb-6"
-              style={{ color: "var(--dark)" }}
-            >
-              Extraction Results
-            </h3>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-[#f1f4f3] p-4 rounded-xl">
-                <div className="text-2xl font-semibold">
-                  {uploadResults.vocabulary_added}
-                </div>
-                <div className="text-sm text-[#596060]">Words added</div>
-              </div>
-              <div className="bg-[#f1f4f3] p-4 rounded-xl">
-                <div className="text-2xl font-semibold">
-                  {uploadResults.grammar_added}
-                </div>
-                <div className="text-sm text-[#596060]">Grammar added</div>
-              </div>
+            error
+          </span>
+          <div className="flex-1">
+            <div className="font-semibold text-sm text-red-700">
+              Extraction failed
             </div>
-            {uploadResults.vocabulary.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {uploadResults.vocabulary.map((v, i) => (
-                  <span
-                    key={i}
-                    className="bg-[#eaefee] px-3 py-1.5 rounded-lg text-sm"
-                  >
-                    {v.target_word} — {v.native_translation}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[#596060] text-sm">No new items extracted.</p>
-            )}
+            <div className="text-sm text-red-600 mt-0.5">{uploadError}</div>
           </div>
+          <button
+            onClick={() => setUploadError(null)}
+            className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18 }}
+            >
+              close
+            </span>
+          </button>
         </div>
+      )}
+
+      {/* Extraction review modal */}
+      {showReviewModal && uploadResults && (
+        <ExtractionReviewModal
+          results={uploadResults}
+          onClose={() => setShowReviewModal(false)}
+        />
       )}
     </div>
   );
