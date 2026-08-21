@@ -35,6 +35,7 @@ from agents.logging_utils import (
     call_llm_with_json,
 )
 from database import SUPPORTED_LANGUAGES, Vocabulary, Grammar
+from agents.romanization_utils import romanize_to_finglish as _romanize_to_finglish
 
 logger = get_logger(__name__)
 
@@ -917,3 +918,10 @@ Translation:"""
         logger.info(f"   {Colors.GREEN}✓ Translation:{Colors.END} {translation}")
 
         return translation
+
+    def romanize_to_finglish(self, text: str) -> str:
+        """
+        Romanize Persian text to Finglish (phonetic Latin alphabet representation).
+        Only meaningful when target_language is Persian/Farsi.
+        """
+        return _romanize_to_finglish(self.client, self.model, text)

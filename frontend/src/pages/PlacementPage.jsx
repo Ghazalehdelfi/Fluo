@@ -11,6 +11,7 @@ export default function PlacementPage() {
     navigate,
     showLoading,
     hideLoading,
+    invalidateCache,
   } = useApp();
   const [view, setView] = useState("choice"); // 'choice' | 'test' | 'results' | 'review'
 
@@ -18,12 +19,16 @@ export default function PlacementPage() {
   const [sessionId, setSessionId] = useState(null);
   const [question, setQuestion] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(10);
+  const [levelIndex, setLevelIndex] = useState(0);
+  const [questionsAtLevel, setQuestionsAtLevel] = useState(1);
+  const [questionsPerLevel, setQuestionsPerLevel] = useState(3);
+  const [totalLevels, setTotalLevels] = useState(6);
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [textAnswer, setTextAnswer] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [feedbackCorrect, setFeedbackCorrect] = useState(null);
   const [waitingNext, setWaitingNext] = useState(false);
+  const [showRomanization, setShowRomanization] = useState(false);
 
   // Results state
   const [results, setResults] = useState(null);
@@ -48,12 +53,16 @@ export default function PlacementPage() {
       setSessionId(data.session_id);
       setQuestion(data.question);
       setQuestionIndex(0);
-      setTotalQuestions(data.total_questions || 10);
+      setLevelIndex(data.level_index ?? 0);
+      setQuestionsAtLevel(data.questions_at_level ?? 1);
+      setQuestionsPerLevel(data.questions_per_level ?? 3);
+      setTotalLevels(data.total_levels ?? 6);
       setFeedback(null);
       setFeedbackCorrect(null);
       setSelectedAnswer("");
       setTextAnswer("");
       setWaitingNext(false);
+      setShowRomanization(false);
       setView("test");
     } catch (e) {
       console.error(e);
@@ -93,11 +102,19 @@ export default function PlacementPage() {
         setTimeout(() => {
           setQuestion(data.question || data.next_question);
           setQuestionIndex((qi) => qi + 1);
+          if (data.level_index !== undefined) setLevelIndex(data.level_index);
+          if (data.questions_at_level !== undefined)
+            setQuestionsAtLevel(data.questions_at_level);
+          if (data.questions_per_level !== undefined)
+            setQuestionsPerLevel(data.questions_per_level);
+          if (data.total_levels !== undefined)
+            setTotalLevels(data.total_levels);
           setSelectedAnswer("");
           setTextAnswer("");
           setFeedback(null);
           setFeedbackCorrect(null);
           setWaitingNext(false);
+          setShowRomanization(false);
         }, delay);
       } else {
         setWaitingNext(false);
@@ -155,6 +172,8 @@ export default function PlacementPage() {
         alert("Failed to save");
         return;
       }
+      // Clear cached vocab/stats/grammar so the new words show up immediately
+      invalidateCache(currentLanguageId);
       navigate(`/${currentLanguageSlug}/vocabulary`);
     } catch (e) {
       console.error(e);
@@ -288,10 +307,20 @@ export default function PlacementPage() {
 
   // ---- Test View ----
   if (view === "test" && question) {
-    const progress = Math.round((questionIndex / totalQuestions) * 100);
+    const progress = Math.min(
+      100,
+      Math.round(
+        ((levelIndex + questionsAtLevel / questionsPerLevel) / totalLevels) *
+          100,
+      ),
+    );
     const isMultipleChoice =
       question.type === "multiple_choice" ||
       (question.options && question.options.length > 0);
+    const questionText = question.text || question.question || "";
+    const hasRomanization =
+      question.romanization &&
+      question.romanization.trim() !== questionText.trim();
 
     return (
       <div>
@@ -300,9 +329,18 @@ export default function PlacementPage() {
             <h2 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>
               Placement Test
             </h2>
-            <span className="text-sm text-[#596060]">
-              Question {questionIndex + 1} of {totalQuestions}
-            </span>
+            <div className="text-right">
+              <span
+                className="text-sm font-medium"
+                style={{ color: "var(--dark)" }}
+              >
+                Question {questionIndex + 1}
+              </span>
+              <p className="text-xs text-[#596060]">
+                Level {question.level || "—"} · {questionsAtLevel}/
+                {questionsPerLevel} at this level
+              </p>
+            </div>
           </div>
           <div
             className="h-2 rounded-full overflow-hidden"
@@ -313,6 +351,10 @@ export default function PlacementPage() {
               style={{ width: `${progress}%`, background: "var(--primary)" }}
             />
           </div>
+          <p className="text-xs text-[#596060] mt-2">
+            The test adapts to your level — it ends early once your level is
+            found, and goes longer if you're doing well.
+          </p>
         </header>
 
         <div className="max-w-2xl">
@@ -334,8 +376,32 @@ export default function PlacementPage() {
               className="text-xl font-semibold"
               style={{ color: "var(--dark)" }}
             >
-              {question.text || question.question}
+              {questionText}
             </p>
+            {showRomanization && hasRomanization && (
+              <p
+                className="mt-3 text-sm font-medium"
+                style={{ color: "var(--primary)", direction: "ltr" }}
+              >
+                {question.romanization}
+              </p>
+            )}
+            {hasRomanization && (
+              <button
+                onClick={() => setShowRomanization((r) => !r)}
+                className="mt-4 text-xs px-3 py-1 rounded-full transition-colors"
+                style={{
+                  background: showRomanization
+                    ? "var(--primary)"
+                    : "var(--surface-container-low)",
+                  color: showRomanization
+                    ? "var(--on-primary)"
+                    : "var(--accent1)",
+                }}
+              >
+                {showRomanization ? "Hide Latin" : "Latin"}
+              </button>
+            )}
           </div>
 
           {feedback && (
@@ -379,6 +445,17 @@ export default function PlacementPage() {
                   }}
                 >
                   {opt}
+                  {showRomanization &&
+                    question.option_romanizations?.[i] &&
+                    question.option_romanizations[i].trim() !==
+                      String(opt).trim() && (
+                      <span
+                        className="block mt-1 text-xs font-normal"
+                        style={{ opacity: 0.8, direction: "ltr" }}
+                      >
+                        {question.option_romanizations[i]}
+                      </span>
+                    )}
                 </button>
               ))}
             </div>
@@ -493,7 +570,7 @@ export default function PlacementPage() {
           <div className="flex gap-3">
             <button
               onClick={generateContent}
-              className="btn-primary flex-1 py-4 rounded-xl font-semibold flex items-center justify-center gap-2"
+              className="btn-primary flex-1 py-4 rounded-xl font-semibold flex items-center gap-2"
             >
               <span className="material-symbols-outlined">auto_fix_high</span>
               Generate Vocabulary for My Level
@@ -513,9 +590,27 @@ export default function PlacementPage() {
 
   // ---- Review View ----
   if (view === "review") {
+    const saveButtons = (
+      <div className="flex gap-3">
+        <button
+          onClick={saveContent}
+          className="btn-primary px-8 py-4 rounded-xl font-semibold flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined">save</span>
+          Save to Knowledge Base
+        </button>
+        <button
+          onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}
+          className="btn-secondary px-6 py-4 rounded-xl font-medium"
+        >
+          Skip
+        </button>
+      </div>
+    );
+
     return (
       <div>
-        <header className="mb-10">
+        <header className="mb-6">
           <h2
             className="text-4xl font-bold tracking-tight"
             style={{ color: "var(--dark)" }}
@@ -526,6 +621,8 @@ export default function PlacementPage() {
             Edit or remove items before saving to your knowledge base
           </p>
         </header>
+
+        <div className="mb-8">{saveButtons}</div>
 
         {/* Vocabulary review table */}
         {reviewVocab.length > 0 && (
@@ -685,21 +782,7 @@ export default function PlacementPage() {
           </div>
         )}
 
-        <div className="flex gap-3">
-          <button
-            onClick={saveContent}
-            className="btn-primary px-8 py-4 rounded-xl font-semibold flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined">save</span>
-            Save to Knowledge Base
-          </button>
-          <button
-            onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}
-            className="btn-secondary px-6 py-4 rounded-xl font-medium"
-          >
-            Skip
-          </button>
-        </div>
+        {saveButtons}
       </div>
     );
   }

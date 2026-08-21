@@ -267,6 +267,7 @@ async def start_lesson(
     logger.info(f"\n{Colors.BLUE}🔊 Generating TTS for opening message...{Colors.END}")
     audio_bytes = dialogue.text_to_speech(opening_message)
     opening_translation = dialogue.translate_to_native(opening_message)
+    opening_romanization = dialogue.romanize_to_finglish(opening_message) if target_lang == "Persian" else None
 
     active_sessions[(user.id, session_id)] = {
         "dialogue": dialogue,
@@ -287,6 +288,7 @@ async def start_lesson(
         "lesson_plan": lesson_plan,
         "opening_message": opening_message,
         "opening_translation": opening_translation,
+        "opening_romanization": opening_romanization,
         "audio": audio_bytes.hex(),
         "vocab_info": "Conversations are generated using at least 70% of vocabulary from your personal database.",
     }
@@ -351,6 +353,7 @@ async def start_scenario(
 
     audio_bytes = dialogue.text_to_speech(opening_message)
     opening_translation = dialogue.translate_to_native(opening_message)
+    opening_romanization = dialogue.romanize_to_finglish(opening_message) if target_lang == "Persian" else None
 
     active_sessions[(user.id, session_id)] = {
         "dialogue": dialogue,
@@ -373,6 +376,7 @@ async def start_scenario(
         "scenario": body.scenario,
         "opening_message": opening_message,
         "opening_translation": opening_translation,
+        "opening_romanization": opening_romanization,
         "audio": audio_bytes.hex(),
         "vocab_info": "Conversations are generated using at least 70% of vocabulary from your personal database.",
     }
@@ -422,11 +426,14 @@ async def respond_to_conversation(
     response_text, is_ended = dialogue.generate_response(user_message)
     audio_bytes = dialogue.text_to_speech(response_text)
     translation = dialogue.translate_to_native(response_text)
+    target_lang = session.get("target_language", "")
+    romanization = dialogue.romanize_to_finglish(response_text) if target_lang == "Persian" else None
 
     return {
         "user_message": user_message,
         "response": response_text,
         "translation": translation,
+        "romanization": romanization,
         "audio": audio_bytes.hex(),
         "is_ended": is_ended,
     }

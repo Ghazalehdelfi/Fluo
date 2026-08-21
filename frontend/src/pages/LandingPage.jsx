@@ -92,14 +92,12 @@ export default function LandingPage() {
         <div className="pointer-events-none absolute -bottom-20 right-0 h-72 w-72 rounded-full bg-[rgba(241,204,131,0.28)] blur-[64px]" />
         <div className="relative mx-auto max-w-4xl px-5 py-24 text-center md:px-10 md:py-32">
           <div className="inline-flex items-center rounded-full border border-[rgba(67,101,101,0.22)] bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
-            Your personal language companion
+            Your personal language learning companion
           </div>
           <h1 className="mt-6 text-5xl font-black leading-[1.08] tracking-tight text-[var(--dark)] md:text-6xl lg:text-[4.5rem]">
-            Learn a language
+            Optimize your
             <br />
-            <span className="text-[var(--primary)]">
-              from your own material.
-            </span>
+            <span className="text-[var(--primary)]">notes and practices.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--accent1)] md:text-xl">
             Fluō turns your notes, textbooks, and study sheets into flashcards,
@@ -156,106 +154,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Who are you? ───────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 pb-4 md:px-10">
-        <h2 className="text-center text-3xl font-black tracking-tight text-[var(--dark)] md:text-4xl">
-          Who is Fluō for?
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-center text-base text-[var(--accent1)]">
-          Whether you're learning solo or running a class, Fluō fits your
-          workflow.
-        </p>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          <div
-            className="group cursor-pointer rounded-3xl border border-[rgba(67,101,101,0.18)] bg-white p-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(17,56,44,0.12)]"
-            onClick={() =>
-              document
-                .getElementById("self-learner")
-                .scrollIntoView({ behavior: "smooth" })
-            }
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--primary-container)]">
-              <span
-                className="material-symbols-outlined text-[var(--primary)]"
-                style={{ fontSize: 26 }}
-              >
-                person
-              </span>
-            </div>
-            <h3 className="mt-5 text-xl font-black text-[var(--dark)]">
-              Self Learner
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              You study independently — with a tutor, a course, or just from
-              books and shows. Fluō becomes your always-on practice partner that
-              works from <em>your</em> material, not a preset curriculum.
-            </p>
-            <div className="mt-5 flex items-center gap-1 text-sm font-semibold text-[var(--primary)] transition-all group-hover:gap-2">
-              See how it works
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18 }}
-              >
-                arrow_forward
-              </span>
-            </div>
-          </div>
-
-          <div
-            className="group cursor-pointer rounded-3xl border border-[rgba(67,101,101,0.18)] bg-white p-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(17,56,44,0.12)]"
-            onClick={() =>
-              document
-                .getElementById("teachers")
-                .scrollIntoView({ behavior: "smooth" })
-            }
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--tertiary-container)]">
-              <span
-                className="material-symbols-outlined text-[var(--primary)]"
-                style={{ fontSize: 26 }}
-              >
-                school
-              </span>
-            </div>
-            <h3 className="mt-5 text-xl font-black text-[var(--dark)]">
-              Language Teacher
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-              You teach classes or give private lessons. Fluō lets you assign
-              structured practice homework and see exactly how each student is
-              progressing between sessions.
-            </p>
-            <div className="mt-5 flex items-center gap-1 text-sm font-semibold text-[var(--primary)] transition-all group-hover:gap-2">
-              See how it works
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18 }}
-              >
-                arrow_forward
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── Self Learner Section ────────────────────── */}
       <section
         id="self-learner"
         className="mt-16 bg-[var(--surface-container-low)] py-16"
       >
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <div className="mb-3 inline-flex items-center rounded-full bg-[var(--primary-container)] px-4 py-1.5">
-            <span className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
-              For self learners
-            </span>
-          </div>
           <h2 className="mt-2 max-w-2xl text-3xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-4xl">
-            A companion that learns <em>with</em> your material, not despite it.
+            Who is Fluō for?
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--accent1)]">
-            Most apps ignore what you're actually studying. Fluō does the
-            opposite — everything starts from your own notes, and every practice
-            session pulls from what you've genuinely encountered.
+            Fluō is designed for anyone with an existing learning practice. If
+            you already have notes, textbooks, or worksheets, Fluō can turn them
+            into a personalized learning companion that helps you retain more
+            and practice more effectively.
           </p>
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -437,79 +349,6 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-      <section
-        id="teachers"
-        className="bg-[var(--surface-container-low)] py-16"
-      >
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <div className="mb-3 inline-flex items-center rounded-full bg-[var(--tertiary-container)] px-4 py-1.5">
-            <span className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
-              For teachers
-            </span>
-          </div>
-          <h2 className="mt-2 max-w-2xl text-3xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-4xl">
-            Give your students a practice partner between sessions.
-          </h2>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--accent1)]">
-            Students forget most of what they learn within 24 hours without
-            reinforcement. Fluō turns your curriculum into structured daily
-            practice so your teaching actually sticks.
-          </p>
-          <div className="mt-10 grid gap-5 sm:grid-cols-3">
-            {TEACHER_FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-2xl border border-[rgba(67,101,101,0.12)] bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(17,56,44,0.08)]"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--tertiary-container)]">
-                  <span
-                    className="material-symbols-outlined text-[var(--primary)]"
-                    style={{ fontSize: 22 }}
-                  >
-                    {f.icon}
-                  </span>
-                </div>
-                <h3 className="mt-4 text-sm font-black text-[var(--dark)]">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-                  {f.body}
-                </p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10">
-            <button
-              onClick={() => openAuth("signup")}
-              className="btn-primary rounded-2xl px-7 py-3.5 text-sm font-semibold"
-            >
-              Set up a class
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Bottom CTA ─────────────────────────────── */}
-      <section className="relative overflow-hidden py-24">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[rgba(114,168,151,0.14)] via-transparent to-[rgba(241,204,131,0.14)]" />
-        <div className="relative mx-auto max-w-2xl px-5 text-center md:px-10">
-          <h2 className="text-4xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-5xl">
-            Start speaking more.
-            <br />
-            Starting today.
-          </h2>
-          <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-[var(--accent1)]">
-            Upload your first set of notes, build your knowledge base, and try a
-            live conversation — all in under five minutes.
-          </p>
-          <button
-            onClick={() => openAuth("signup")}
-            className="btn-primary mt-8 rounded-2xl px-8 py-4 text-base font-bold"
-          >
-            Create your free account
-          </button>
         </div>
       </section>
 

@@ -7,10 +7,13 @@ export default function PracticePage() {
   const {
     currentLanguageId,
     currentLanguageName,
+    currentLanguageSlug,
     apiFetch,
+    navigate,
     showLoading,
     hideLoading,
     fetchTopics,
+    fetchStats,
     pendingConversationTopic,
     setPendingConversationTopic,
   } = useApp();
@@ -21,6 +24,7 @@ export default function PracticePage() {
   const [topicGroups, setTopicGroups] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [customScenario, setCustomScenario] = useState("");
+  const [vocabCount, setVocabCount] = useState(null);
 
   // Conversation state
   const [sessionId, setSessionId] = useState(null);
@@ -39,7 +43,10 @@ export default function PracticePage() {
   const textInputRef = useRef(null);
 
   useEffect(() => {
-    if (currentLanguageId) loadTopics();
+    if (currentLanguageId) {
+      loadTopics();
+      loadStats();
+    }
   }, [currentLanguageId]);
 
   useEffect(() => {
@@ -58,6 +65,11 @@ export default function PracticePage() {
   async function loadTopics() {
     const data = await fetchTopics(currentLanguageId);
     setTopicGroups(data.clusters || []);
+  }
+
+  async function loadStats() {
+    const data = await fetchStats(currentLanguageId);
+    setVocabCount(data?.total_vocabulary ?? 0);
   }
 
   async function startSession() {
@@ -81,7 +93,12 @@ export default function PracticePage() {
         });
       }
       if (!resp.ok) {
-        alert("Failed to start session");
+        let detail = "Failed to start session";
+        try {
+          const err = await resp.json();
+          if (err.detail) detail = err.detail;
+        } catch {}
+        alert(detail);
         hideLoading();
         return;
       }
@@ -95,6 +112,7 @@ export default function PracticePage() {
           data.greeting ||
           "Hello! Let's begin.",
         translation: data.opening_translation || data.translation,
+        romanization: data.opening_romanization || null,
         audio: data.audio,
       };
       setMessages([firstMsg]);
@@ -140,6 +158,7 @@ export default function PracticePage() {
           role: "assistant",
           content: data.response,
           translation: data.translation,
+          romanization: data.romanization || null,
           audio: data.audio,
         },
       ]);
@@ -363,9 +382,57 @@ export default function PracticePage() {
               </div>
             )}
 
+            {vocabCount === 0 && (
+              <div
+                className="rounded-2xl p-6"
+                style={{
+                  background: "rgba(254,242,242,0.7)",
+                  border: "1px solid #fca5a5",
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className="material-symbols-outlined shrink-0"
+                    style={{ color: "#991b1b" }}
+                  >
+                    info
+                  </span>
+                  <div>
+                    <h4 className="font-semibold" style={{ color: "#991b1b" }}>
+                      No vocabulary yet
+                    </h4>
+                    <p className="text-sm mt-1" style={{ color: "#991b1b" }}>
+                      Conversations are built from your personal vocabulary. Add
+                      some {currentLanguageName} words first to start
+                      practicing.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <button
+                        onClick={() =>
+                          navigate(`/${currentLanguageSlug}/notes`)
+                        }
+                        className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Upload Notes
+                      </button>
+                      <button
+                        onClick={() =>
+                          navigate(`/${currentLanguageSlug}/placement`)
+                        }
+                        className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Take Placement Test
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={startSession}
-              className="btn-primary w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-3"
+              disabled={vocabCount === 0}
+              className="btn-primary w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined">mic</span>
               Start Session
@@ -458,7 +525,11 @@ export default function PracticePage() {
 
         <div className="flex-1 overflow-y-auto space-y-4 px-2 pb-4">
           {messages.map((msg, i) => (
-            <MessageBubble key={i} msg={msg} />
+            <MessageBubble
+              key={i}
+              msg={msg}
+              isPersian={currentLanguageName === "Persian"}
+            />
           ))}
           {isTyping && <TypingIndicator />}
           <div ref={messagesEndRef} />
@@ -678,8 +749,9 @@ export default function PracticePage() {
   return null;
 }
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, isPersian }) {
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showRomanization, setShowRomanization] = useState(false);
   const isUser = msg.role === "user";
 
   return (
@@ -715,6 +787,14 @@ function MessageBubble({ msg }) {
           <p style={{ color: isUser ? "var(--on-primary)" : "var(--dark)" }}>
             {msg.content}
           </p>
+          {!isUser && showRomanization && msg.romanization && (
+            <p
+              className="mt-2 text-xs font-medium"
+              style={{ color: "var(--primary)", direction: "ltr" }}
+            >
+              {msg.romanization}
+            </p>
+          )}
           {!isUser && showTranslation && msg.translation && (
             <p
               className="mt-2 text-xs italic"
@@ -724,39 +804,56 @@ function MessageBubble({ msg }) {
             </p>
           )}
         </div>
-        {!isUser && (msg.translation || msg.audio) && (
-          <div className="flex gap-2 mt-1.5 ml-2">
-            {msg.translation && (
-              <button
-                onClick={() => setShowTranslation((t) => !t)}
-                className="text-xs px-3 py-1 rounded-full transition-colors"
-                style={{
-                  background: "var(--surface-container-low)",
-                  color: "var(--accent1)",
-                }}
-              >
-                {showTranslation ? "Hide" : "Translate"}
-              </button>
-            )}
-            {msg.audio && (
-              <button
-                onClick={() => playAudio(msg.audio)}
-                className="text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1"
-                style={{
-                  background: "var(--surface-container-low)",
-                  color: "var(--accent1)",
-                }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: 14 }}
+        {!isUser &&
+          (msg.translation || msg.audio || (isPersian && msg.romanization)) && (
+            <div className="flex gap-2 mt-1.5 ml-2 flex-wrap">
+              {isPersian && msg.romanization && (
+                <button
+                  onClick={() => setShowRomanization((r) => !r)}
+                  className="text-xs px-3 py-1 rounded-full transition-colors"
+                  style={{
+                    background: showRomanization
+                      ? "var(--primary)"
+                      : "var(--surface-container-low)",
+                    color: showRomanization
+                      ? "var(--on-primary)"
+                      : "var(--accent1)",
+                  }}
                 >
-                  volume_up
-                </span>
-              </button>
-            )}
-          </div>
-        )}
+                  {showRomanization ? "Hide Latin" : "Latin"}
+                </button>
+              )}
+              {msg.translation && (
+                <button
+                  onClick={() => setShowTranslation((t) => !t)}
+                  className="text-xs px-3 py-1 rounded-full transition-colors"
+                  style={{
+                    background: "var(--surface-container-low)",
+                    color: "var(--accent1)",
+                  }}
+                >
+                  {showTranslation ? "Hide" : "Translate"}
+                </button>
+              )}
+              {msg.audio && (
+                <button
+                  onClick={() => playAudio(msg.audio)}
+                  className="text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1"
+                  style={{
+                    background: "var(--surface-container-low)",
+                    color: "var(--accent1)",
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 14 }}
+                  >
+                    volume_up
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
       </div>
     </div>
   );

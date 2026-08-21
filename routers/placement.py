@@ -21,6 +21,7 @@ from agents.placement_agent import (
     ADVANCE_THRESHOLD,
     LEVEL_DESCRIPTIONS,
 )
+from agents.romanization_utils import is_persian, romanize_question_finglish
 from grammar_utils import (
     GRAMMAR_SIMILARITY_HIGH,
     cosine_similarity,
@@ -66,6 +67,28 @@ def _build_results_summary(results: List[Dict]) -> List[Dict]:
         }
         for lvl, d in level_data.items()
     ]
+
+
+def _question_payload(session: Dict, question: Dict) -> Dict:
+    """Build the question payload for the client, adding Finglish
+    romanization for Persian questions."""
+    payload = {
+        "question": question["question"],
+        "type": question["type"],
+        "options": question.get("options"),
+        "hint": question.get("hint", ""),
+        "level": question["level"],
+    }
+    if is_persian(session["language_name"]):
+        rom = romanize_question_finglish(
+            session["tracked_client"],
+            session["agent"].model,
+            question["question"],
+            question.get("options"),
+        )
+        payload["romanization"] = rom.get("question_finglish")
+        payload["option_romanizations"] = rom.get("options_finglish")
+    return payload
 
 
 @router.post("/api/placement-test/start/{language_id}")
@@ -124,14 +147,13 @@ async def placement_test_start(
 
     return {
         "session_id": session_id,
-        "question": {
-            "question": first_question["question"],
-            "type": first_question["type"],
-            "options": first_question.get("options"),
-            "hint": first_question.get("hint", ""),
-            "level": first_question["level"],
-        },
+        "question": _question_payload(
+            active_sessions[(user.id, f"placement_{session_id}")], first_question
+        ),
         "question_number": 1,
+        "level_index": 0,
+        "questions_at_level": 1,
+        "questions_per_level": QUESTIONS_PER_LEVEL,
         "total_levels": len(CEFR_LEVELS),
     }
 
@@ -220,14 +242,12 @@ async def placement_test_answer(
         "correct": is_correct,
         "explanation": evaluation.get("explanation", ""),
         "completed": False,
-        "question": {
-            "question": next_question["question"],
-            "type": next_question["type"],
-            "options": next_question.get("options"),
-            "hint": next_question.get("hint", ""),
-            "level": next_question["level"],
-        },
+        "question": _question_payload(session, next_question),
         "question_number": total_asked + 1,
+        "level_index": session["level_index"],
+        "questions_at_level": session["questions_at_level"],
+        "questions_per_level": QUESTIONS_PER_LEVEL,
+        "total_levels": len(CEFR_LEVELS),
     }
 
 
