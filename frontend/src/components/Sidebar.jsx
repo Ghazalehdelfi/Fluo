@@ -70,70 +70,60 @@ function LanguageSwitcher() {
         </svg>
       </button>
       <div className={`lang-switcher-dropdown ${open ? "open" : ""}`}>
-        {userLanguages.length === 0 ? (
+        {userLanguages.length === 0 && (
           <div
             className="lang-switcher-option"
             style={{ color: "var(--primary)" }}
-            onClick={() => {
-              setOpen(false); /* handled by Add Lang btn */
-            }}
           >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 18 }}
-            >
-              translate
-            </span>
             <span>No languages yet</span>
           </div>
-        ) : (
-          userLanguages.map((lang) => (
-            <div
-              key={lang.id}
-              className={`lang-switcher-option ${lang.id === currentLanguageId ? "active" : ""}`}
-              style={{ justifyContent: "space-between" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  flex: 1,
-                }}
-                onClick={() => switchLanguage(lang)}
-              >
-                <LangFlag name={lang.name} style={{ fontSize: "1.125rem" }} />
-                <span>{lang.name}</span>
-              </div>
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: 16,
-                  color: "var(--accent1)",
-                  cursor: "pointer",
-                  padding: 2,
-                  borderRadius: 4,
-                  transition: "color 0.15s",
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.color = "var(--accent1)")
-                }
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  setRemoveLangModal({
-                    show: true,
-                    id: lang.id,
-                    name: lang.name,
-                  });
-                }}
-              >
-                close
-              </span>
-            </div>
-          ))
         )}
+        {userLanguages.map((lang) => (
+          <div
+            key={lang.id}
+            className={`lang-switcher-option ${lang.id === currentLanguageId ? "active" : ""}`}
+            style={{ justifyContent: "space-between" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                flex: 1,
+              }}
+              onClick={() => switchLanguage(lang)}
+            >
+              <LangFlag name={lang.name} style={{ fontSize: "1.125rem" }} />
+              <span>{lang.name}</span>
+            </div>
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 16,
+                color: "var(--accent1)",
+                cursor: "pointer",
+                padding: 2,
+                borderRadius: 4,
+                transition: "color 0.15s",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
+              onMouseOut={(e) =>
+                (e.currentTarget.style.color = "var(--accent1)")
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                setRemoveLangModal({
+                  show: true,
+                  id: lang.id,
+                  name: lang.name,
+                });
+              }}
+            >
+              close
+            </span>
+          </div>
+        ))}
         {availableLanguages.length > 0 && (
           <div
             className="lang-switcher-option"
@@ -145,10 +135,16 @@ function LanguageSwitcher() {
             }}
             onClick={() => {
               setOpen(false);
-              useApp;
+              setShowAddLangModal(true);
             }}
           >
-            {/* handled via AddLangBtn in Sidebar */}
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18 }}
+            >
+              add
+            </span>
+            <span>Add Language</span>
           </div>
         )}
       </div>
@@ -159,6 +155,7 @@ function LanguageSwitcher() {
 export default function Sidebar() {
   const {
     currentUser,
+    features,
     route,
     navigate,
     navigateToActiveSection,
@@ -172,7 +169,7 @@ export default function Sidebar() {
 
   const page = route.page;
   const section = route.section;
-  const isTeacher = currentUser?.role === "teacher";
+  const isTeacher = features?.teacher && currentUser?.role === "teacher";
 
   function closeMobile() {
     setMobileSidebarOpen(false);
@@ -310,7 +307,7 @@ export default function Sidebar() {
               <span className="material-symbols-outlined">dashboard</span>
               <span>Dashboard</span>
             </a>
-            {currentUser?.enrolled_in_class && (
+            {features?.teacher && currentUser?.enrolled_in_class && (
               <a
                 className={`sidebar-nav-item ${activeClass("student-homework")}`}
                 onClick={() => {

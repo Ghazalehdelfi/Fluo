@@ -25,6 +25,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from database import init_db
+import feature_flags
 from agents.logging_utils import setup_logging, get_logger, print_startup_banner
 from rate_limiter import limiter, user_limiter
 from session_store import purge_expired_sessions
@@ -98,7 +99,8 @@ for _router_module in [
     history,
     placement,
     billing,
-    classes,
+    # Teacher persona routes (classes/homework) — only mounted when enabled
+    *([classes] if feature_flags.ENABLE_TEACHER_FEATURES else []),
 ]:
     app.include_router(_router_module.router)
 
@@ -121,6 +123,12 @@ async def serve_frontend():
 async def healthz():
     """Container health check — returns 200 when the process is alive."""
     return JSONResponse({"status": "ok"})
+
+
+@app.get("/api/config")
+async def get_public_config():
+    """Public runtime config for the frontend (feature flags)."""
+    return {"teacher_features_enabled": feature_flags.ENABLE_TEACHER_FEATURES}
 
 
 @app.get("/favicon.svg")

@@ -393,3 +393,23 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+class EmailVerificationCode(Base):
+    """One-time 6-digit code emailed to verify ownership of an address.
+
+    Used for both registration (confirm email) and password reset.
+    Codes are stored hashed (SHA-256), expire after a short TTL, and are
+    single-use with a limited number of verification attempts.
+    """
+
+    __tablename__ = "email_verification_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True, nullable=False)
+    code_hash = Column(String, nullable=False)
+    purpose = Column(String, nullable=False)  # 'register' | 'password_reset'
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    consumed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -42,3 +42,15 @@ If the keys are absent, the app runs normally with no observability (graceful de
 - **Spans**: every TTS and STT call with duration and cost
 - **Errors**: any failed call is marked ERROR with the exception message
 - **User analytics**: filter by `user_id` to see a specific student's activity
+
+---
+
+## Feature flags
+
+Set these as env vars (SSM or `.env`) to toggle major feature sets:
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `ENABLE_TEACHER_FEATURES` | `false` | When `true`: mounts the classes/homework API routes, allows teacher role at signup, and shows all teacher/student-homework UI. When `false`: those routes 404, registration forces `role="student"`, and the frontend hides the role selector, teacher pages, and homework nav. |
+
+The frontend reads the flag at runtime from `GET /api/config`, so no rebuild is needed after toggling — just restart the backend.

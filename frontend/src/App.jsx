@@ -43,6 +43,9 @@ export default function App() {
 
   const [route, setRoute] = useState(() => parsePath(window.location.pathname));
 
+  // Feature flags fetched from the backend at runtime
+  const [features, setFeatures] = useState({ teacher: false });
+
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
 
@@ -125,7 +128,7 @@ export default function App() {
     setAuthenticated(true);
     setNativeLanguage(user?.native_language || "English");
     // Teachers go to their classes page on first login
-    if (user?.role === "teacher") {
+    if (features.teacher && user?.role === "teacher") {
       setRoute({ page: "teacher-classes" });
     }
   }
@@ -309,6 +312,15 @@ export default function App() {
 
   // Check auth on mount
   useEffect(() => {
+    // Fetch public runtime config (feature flags) — no auth required
+    fetch("/api/config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => {
+        if (cfg)
+          setFeatures({ teacher: !!cfg.teacher_features_enabled });
+      })
+      .catch(() => {});
+
     async function checkAuth() {
       if (!authToken) {
         setAuthChecking(false);
@@ -365,6 +377,7 @@ export default function App() {
   const contextValue = {
     authToken,
     currentUser,
+    features,
     userLanguages,
     availableLanguages,
     currentLanguageId,
@@ -453,15 +466,17 @@ export default function App() {
   // Determine which page to render
   function renderPage() {
     const { page, section } = route;
-    // Teacher pages
-    if (page === "teacher-classes") return <TeacherClassesPage />;
-    if (page === "teacher-homework") return <TeacherHomeworkPage />;
-    if (page === "create-homework") return <CreateHomeworkPage />;
-    if (page === "homework-detail")
-      return <CreateHomeworkPage homeworkId={route.homeworkId} editMode />;
-    if (page === "student-homework") return <StudentHomeworkPage />;
-    if (page === "student-homework-detail")
-      return <StudentHomeworkDetailPage homeworkId={route.homeworkId} />;
+    // Teacher pages (feature-flagged)
+    if (features.teacher) {
+      if (page === "teacher-classes") return <TeacherClassesPage />;
+      if (page === "teacher-homework") return <TeacherHomeworkPage />;
+      if (page === "create-homework") return <CreateHomeworkPage />;
+      if (page === "homework-detail")
+        return <CreateHomeworkPage homeworkId={route.homeworkId} editMode />;
+      if (page === "student-homework") return <StudentHomeworkPage />;
+      if (page === "student-homework-detail")
+        return <StudentHomeworkDetailPage homeworkId={route.homeworkId} />;
+    }
     if (page === "dashboard") return <DashboardPage />;
     if (page === "language") {
       if (section === "notes") return <UploadPage />;
@@ -479,13 +494,13 @@ export default function App() {
     <AppContext.Provider value={contextValue}>
       <div className="min-h-screen" style={{ background: "var(--surface)" }}>
         {/* Mobile top bar */}
-        <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#f8faf9] border-b border-[rgba(172,179,178,0.2)] z-40 flex items-center px-4 gap-3">
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="p-2 rounded-lg"
-            style={{ color: "var(--dark)" }}
-            aria-label="Open menu"
-          >
+        <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[var(--paper-raised)] border-b border-[var(--hairline)] z-40 flex items-center px-4 gap-3">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 rounded-lg"
+              style={{ color: "var(--ink)" }}
+              aria-label="Open menu"
+            >
             <span
               className="material-symbols-outlined"
               style={{ fontSize: 24 }}

@@ -22,3 +22,6 @@ deploy/*.pem
 *.pem
 
 deploy/upload-secrets.sh
+
+smtp.csv
+*.smtp.csv
