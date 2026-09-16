@@ -9,7 +9,7 @@ const LEARNER_FEATURES = [
   },
   {
     icon: "auto_stories",
-    title: "Your Personal Knowledge Base",
+    title: "Extract Your Knowledge",
     body: "Every word and grammar rule you've ever added lives in one searchable place. It grows with you, stays organised, so nothing you've learned gets lost.",
   },
   {
@@ -29,7 +29,7 @@ const LEARNER_FEATURES = [
   },
   {
     icon: "trending_up",
-    title: "Track Your Progress",
+    title: "Progress Tracking",
     body: "Watch fluency scores rise across vocab and grammar. See which words have moved from 'learning' to 'confident', and which topics still need work.",
   },
 ];
@@ -87,22 +87,16 @@ export default function LandingPage() {
       </header>
 
       {/* ── Hero ───────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-32 -left-32 h-80 w-80 rounded-full bg-[rgba(114,168,151,0.25)] blur-[72px]" />
-        <div className="pointer-events-none absolute -bottom-20 right-0 h-72 w-72 rounded-full bg-[rgba(241,204,131,0.28)] blur-[64px]" />
+      <section className="relative overflow-hidden bg-[rgba(241,204,131,0.18)]">
         <div className="relative mx-auto max-w-4xl px-5 py-24 text-center md:px-10 md:py-32">
-          <div className="inline-flex items-center rounded-full border border-[rgba(67,101,101,0.22)] bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
-            Your personal language learning companion
-          </div>
           <h1 className="mt-6 text-5xl font-black leading-[1.08] tracking-tight text-[var(--dark)] md:text-6xl lg:text-[4.5rem]">
-            Optimize your
+            Are you learning a language?
             <br />
-            <span className="text-[var(--primary)]">notes and practices.</span>
+            <span className="text-[var(--primary)]">Get serious about it.</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--accent1)] md:text-xl">
+          <p className="mx-auto mt-6 text-lg leading-relaxed text-[var(--accent1)] md:text-xl">
             Fluō turns your notes, textbooks, and study sheets into flashcards,
-            grammar drills, and live AI conversation practice — all built around
-            what <em>you're</em> actually studying.
+            grammar drills, and live conversation practice. No more random studying — everything is tailored to your learning goals.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <button
@@ -157,16 +151,16 @@ export default function LandingPage() {
       {/* ── Self Learner Section ────────────────────── */}
       <section
         id="self-learner"
-        className="mt-16 bg-[var(--surface-container-low)] py-16"
+        className="bg-[rgba(114,168,151,0.25)] py-16"
       >
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <h2 className="mt-2 max-w-2xl text-3xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-4xl">
             Who is Fluō for?
           </h2>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--accent1)]">
-            Fluō is designed for anyone with an existing learning practice. If
+          <p className="mt-4  text-base leading-relaxed text-[var(--accent1)]">
+            Fluō is designed for anyone on an existing learning journey. If
             you already have notes, textbooks, or worksheets, Fluō can turn them
-            into a personalized learning companion that helps you retain more
+            into a structured learning experience that helps you retain more
             and practice more effectively.
           </p>
 
@@ -176,100 +170,39 @@ export default function LandingPage() {
                 key={f.title}
                 className="rounded-2xl border border-[rgba(67,101,101,0.12)] bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(17,56,44,0.08)]"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-container)]">
+                <div className="flex flex-row items-center">
                   <span
-                    className="material-symbols-outlined text-[var(--primary)]"
+                    className="material-symbols-outlined m-4 text-[var(--primary)]"
                     style={{ fontSize: 22 }}
                   >
                     {f.icon}
                   </span>
-                </div>
-                <h3 className="mt-4 text-sm font-black text-[var(--dark)]">
+                  <h3 className=" text-lg font-black text-[var(--dark)]">
                   {f.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--accent1)]">
-                  {f.body}
-                </p>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-10">
-            <button
-              onClick={() => openAuth("signup")}
-              className="btn-primary rounded-2xl px-7 py-3.5 text-sm font-semibold"
-            >
-              Start learning for free
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ───────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 py-16 md:px-10">
-        <h2 className="text-center text-2xl font-black tracking-tight text-[var(--dark)]">
-          What learners are saying
-        </h2>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <blockquote className="testimonial-tile rounded-2xl p-5">
-            <p className="text-sm leading-relaxed text-[var(--dark)]">
-              "I uploaded my Turkish class notes and was doing real conversation
-              practice the same afternoon. No app has ever worked that way
-              before."
-            </p>
-            <footer className="mt-4 text-xs font-bold uppercase tracking-wider text-[var(--accent1)]">
-              — Yuki, learning Turkish
-            </footer>
-          </blockquote>
-          <blockquote className="testimonial-tile rounded-2xl p-5">
-            <p className="text-sm leading-relaxed text-[var(--dark)]">
-              "Finally a tool that works from <em>my</em> material. I
-              photographed my grammar worksheets and Fluō built drills from them
-              automatically."
-            </p>
-            <footer className="mt-4 text-xs font-bold uppercase tracking-wider text-[var(--accent1)]">
-              — Céline, learning Spanish
-            </footer>
-          </blockquote>
-          <blockquote className="testimonial-tile rounded-2xl p-5">
-            <p className="text-sm leading-relaxed text-[var(--dark)]">
-              "The AI conversation feels like a patient tutor who already knows
-              what I've studied. I can actually practice on the bus now."
-            </p>
-            <footer className="mt-4 text-xs font-bold uppercase tracking-wider text-[var(--accent1)]">
-              — Mariam, learning French
-            </footer>
-          </blockquote>
+          
         </div>
       </section>
 
       {/* ── Pricing model ──────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-16 md:px-10">
-        <div className="rounded-3xl border border-[rgba(67,101,101,0.18)] bg-white p-8 md:p-12">
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <div>
-              <div className="mb-4 inline-flex items-center rounded-full bg-[var(--primary-container)] px-4 py-1.5">
-                <span className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
-                  Pricing
-                </span>
-              </div>
               <h2 className="text-3xl font-black leading-tight tracking-tight text-[var(--dark)] md:text-4xl">
-                No subscription.
-                <br />
-                Ever.
+                No subscription. Ever.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-[var(--accent1)]">
-                Fluō runs on a simple credit system. You top up when you want,
-                spend only when you use AI features, and never get charged for
-                sitting idle. No monthly fees, no lock-in.
+                Top up when you want, spend only when you use AI features. No monthly fees, no lock-in.
               </p>
-              <div className="mt-5 inline-flex items-center gap-2.5 rounded-2xl border border-[rgba(67,101,101,0.25)] bg-[var(--primary-container)] px-5 py-3">
-                <span
-                  className="material-symbols-outlined text-[var(--primary)]"
-                  style={{ fontSize: 22 }}
-                >
-                  redeem
-                </span>
+              <button
+                onClick={() => openAuth("signup")}
+                className="btn-secondary mt-6 rounded-2xl px-6 py-3 text-sm font-semibold"
+              >
                 <span className="text-sm font-bold text-[var(--dark)]">
                   Sign up today and get{" "}
                   <span className="text-[var(--primary)]">
@@ -277,16 +210,10 @@ export default function LandingPage() {
                   </span>{" "}
                   — no card required.
                 </span>
-              </div>
-              <button
-                onClick={() => openAuth("signup")}
-                className="btn-primary mt-6 rounded-2xl px-6 py-3 text-sm font-semibold"
-              >
-                Get free starter credits
               </button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+              <div className="rounded-2xl bg-white border border-[rgba(67,101,101,0.12)] p-5">
                 <span
                   className="material-symbols-outlined text-[var(--primary)]"
                   style={{ fontSize: 28 }}
@@ -296,12 +223,8 @@ export default function LandingPage() {
                 <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
                   Top up any time
                 </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
-                  Add credits whenever you need them — $5, $10, or more. They
-                  never expire.
-                </p>
               </div>
-              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+              <div className="rounded-2xl bg-white border border-[rgba(67,101,101,0.12)] p-5">
                 <span
                   className="material-symbols-outlined text-[var(--primary)]"
                   style={{ fontSize: 28 }}
@@ -309,14 +232,10 @@ export default function LandingPage() {
                   savings
                 </span>
                 <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
-                  Pay per session
+                  Pay per use
                 </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
-                  Credits are deducted only when you run AI conversations, note
-                  extraction, or TTS. Browse and review for free.
-                </p>
               </div>
-              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+              <div className="rounded-2xl bg-white border border-[rgba(67,101,101,0.12)] p-5">
                 <span
                   className="material-symbols-outlined text-[var(--primary)]"
                   style={{ fontSize: 28 }}
@@ -326,13 +245,8 @@ export default function LandingPage() {
                 <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
                   100 credits free to start
                 </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
-                  Every new account gets 100 free starter credits — enough to
-                  explore flashcards, live conversation practice, and note
-                  uploads.
-                </p>
               </div>
-              <div className="rounded-2xl bg-[var(--surface-container-low)] p-5">
+              <div className="rounded-2xl bg-white border border-[rgba(67,101,101,0.12)] p-5">
                 <span
                   className="material-symbols-outlined text-[var(--primary)]"
                   style={{ fontSize: 28 }}
@@ -342,14 +256,9 @@ export default function LandingPage() {
                 <h3 className="mt-3 text-sm font-black text-[var(--dark)]">
                   No lock-in
                 </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--accent1)]">
-                  Cancel nothing. There's nothing to cancel. Use Fluō as much or
-                  as little as suits your schedule.
-                </p>
               </div>
             </div>
           </div>
-        </div>
       </section>
 
       {/* ── Contact ────────────────────────────────── */}
