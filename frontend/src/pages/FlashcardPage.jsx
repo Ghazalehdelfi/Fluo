@@ -10,6 +10,7 @@ import {
   Eyebrow,
   SectionTitle,
   FluencyBadge,
+  Spinner,
   ResultSummary,
   ResultRow,
 } from "../components/ui/index.jsx";
@@ -31,6 +32,7 @@ export default function FlashcardPage() {
   const [direction, setDirection] = useState("target");
   const [fluencyFilter, setFluencyFilter] = useState("all");
   const [wordCount, setWordCount] = useState(0);
+  const [vocabLoading, setVocabLoading] = useState(true);
 
   // Active session state
   const [deck, setDeck] = useState([]);
@@ -45,14 +47,15 @@ export default function FlashcardPage() {
 
   // Load vocab count on filter change
   useEffect(() => {
-    if (currentLanguageId) {
-      fetchVocabulary(currentLanguageId)
-        .then((vocab) => {
-          const filtered = filterVocab(vocab, fluencyFilter);
-          setWordCount(filtered.length);
-        })
-        .catch(() => {});
-    }
+    if (!currentLanguageId) return;
+    setVocabLoading(true);
+    fetchVocabulary(currentLanguageId)
+      .then((vocab) => {
+        const filtered = filterVocab(vocab, fluencyFilter);
+        setWordCount(filtered.length);
+      })
+      .catch(() => {})
+      .finally(() => setVocabLoading(false));
   }, [currentLanguageId, fluencyFilter]);
 
   function filterVocab(vocab, filter) {
@@ -204,12 +207,19 @@ export default function FlashcardPage() {
                 ))}
               </div>
             </div>
-            <div className="text-sm text-center text-[var(--accent1)]">
-              {wordCount} words available
+            <div className="text-sm text-center text-[var(--accent1)] flex items-center justify-center gap-2 min-h-[1.5rem]">
+              {vocabLoading ? (
+                <>
+                  <Spinner size={16} />
+                  Counting words…
+                </>
+              ) : (
+                `${wordCount} word${wordCount === 1 ? "" : "s"} available`
+              )}
             </div>
             </div>
           </Card>
-          <Button size="xl" full icon="style" onClick={beginFlashcards} disabled={wordCount === 0}>
+          <Button size="xl" full icon="style" onClick={beginFlashcards} disabled={vocabLoading || wordCount === 0}>
             Start Flashcards
           </Button>
         </div>
