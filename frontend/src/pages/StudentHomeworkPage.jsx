@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../context/AppContext";
+import { Page, PageHeader, Card, Button, EmptyState, LoadingState } from "../components/ui/index.jsx";
 
 function CompletionBadge({ done, score }) {
   if (!done) return (
@@ -31,37 +32,34 @@ export default function StudentHomeworkPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
-      </div>
+      <Page>
+        <LoadingState />
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold" style={{ color: "var(--dark)" }}>My Homework</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--accent1)" }}>{homework.length} assignment{homework.length !== 1 ? "s" : ""}</p>
-      </div>
+    <Page>
+      <PageHeader
+        title="My Homework"
+        subtitle={`${homework.length} assignment${homework.length !== 1 ? "s" : ""}`}
+      />
 
       {homework.length === 0 ? (
-        <div className="text-center py-20" style={{ color: "var(--accent1)" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 56 }}>assignment</span>
-          <p className="mt-4 text-lg font-medium">No homework assigned yet</p>
-          <p className="text-sm mt-1">Your teacher will assign work here once you're in a class</p>
-        </div>
+        <Card>
+          <EmptyState
+            icon="assignment"
+            title="No homework assigned yet"
+            description="Your teacher will assign work here once you're in a class"
+          />
+        </Card>
       ) : (
         <div className="space-y-3">
           {homework.map((hw) => {
             const isOverdue = hw.due_date && new Date(hw.due_date) < new Date();
             const completions = hw.completions || {};
             return (
-              <div
-                key={hw.id}
-                onClick={() => navigate(`/homework/${hw.id}`)}
-                className="rounded-2xl p-5 cursor-pointer transition-all"
-                style={{ background: "var(--surface-container)" }}
-              >
+              <Card key={hw.id} interactive padding="sm" className="!rounded-2xl" onClick={() => navigate(`/homework/${hw.id}`)}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap mb-1">
@@ -94,11 +92,11 @@ export default function StudentHomeworkPage() {
                   </div>
                   <span className="material-symbols-outlined ml-4 shrink-0" style={{ fontSize: 18, color: "var(--accent1)" }}>chevron_right</span>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
       )}
-    </div>
+    </Page>
   );
 }

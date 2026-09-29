@@ -174,6 +174,7 @@ async def get_dashboard(
     )
 
     fluency_level = "Beginner"
+    high = medium = 0
     if total_vocab > 0:
         high = (
             db.query(func.count(Vocabulary.id))
@@ -273,17 +274,30 @@ async def get_dashboard(
                     else d.date() if hasattr(d, "date") else date.fromisoformat(str(d))
                 )
 
+    today = date.today()
     streak = 0
-    check = date.today()
+    check = today
     while check in activity_dates:
         streak += 1
         check -= timedelta(days=1)
+
+    # Last 7 days, oldest -> today, for the weekly activity strip
+    week_activity = [
+        (today - timedelta(days=offset)) in activity_dates for offset in range(6, -1, -1)
+    ]
 
     return {
         "credits": user.credits_balance,
         "total_vocab": total_vocab,
         "total_grammar": total_grammar,
+        "vocab_by_fluency": {
+            "high": high,
+            "medium": medium,
+            "low": max(total_vocab - high - medium, 0),
+        },
         "fluency_level": fluency_level,
         "daily_streak": streak,
+        "practiced_today": today in activity_dates,
+        "week_activity": week_activity,
         "language_id": language_id,
     }

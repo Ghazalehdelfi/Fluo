@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import CreditIcon from "../components/CreditIcon";
 import ExtractionReviewModal from "../components/modals/ExtractionReviewModal";
-import { getLanguageEmoji, LangFlag } from "../utils.jsx";
+import { LangFlag } from "../utils.jsx";
+import { Page, PageHeader, Card, Button, IconTile, IconButton, SectionTitle, Segmented } from "../components/ui/index.jsx";
 import { useApp } from "../context/AppContext.jsx";
 
 export default function UploadPage() {
@@ -15,7 +16,9 @@ export default function UploadPage() {
     hideLoading,
     invalidateCache,
   } = useApp();
+  const [source, setSource] = useState("files"); // "files" | "text"
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [pastedText, setPastedText] = useState("");
   const [uploadResults, setUploadResults] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -24,18 +27,31 @@ export default function UploadPage() {
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
+  function addFiles(files) {
+    if (files.length === 0) return;
+    setSelectedFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      return [...prev, ...files.filter((f) => !seen.has(`${f.name}-${f.size}`))];
+    });
+  }
+
   function handleFileSelect(e) {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) setSelectedFiles(files);
+    addFiles(Array.from(e.target.files || []));
+    e.target.value = "";
   }
 
   function handleDrop(e) {
     e.preventDefault();
     if (dropZoneRef.current) dropZoneRef.current.style.borderColor = "";
-    const files = Array.from(e.dataTransfer.files).filter(
-      (f) => f.type.startsWith("image/") || f.type === "application/pdf",
+    addFiles(
+      Array.from(e.dataTransfer.files).filter(
+        (f) => f.type.startsWith("image/") || f.type === "application/pdf",
+      ),
     );
-    if (files.length > 0) setSelectedFiles(files);
+  }
+
+  function removeFile(index) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function uploadImage() {
@@ -92,8 +108,7 @@ export default function UploadPage() {
   }
 
   async function uploadText() {
-    const textarea = document.getElementById("upload-text-input");
-    const text = textarea?.value?.trim();
+    const text = pastedText.trim();
     if (!text || !currentLanguageId) return;
     setUploadError(null);
     showLoading("Extracting vocabulary...");
@@ -116,7 +131,7 @@ export default function UploadPage() {
       setPendingGrammar(result.grammar_pending || []);
       setShowReviewModal(true);
       invalidateCache(currentLanguageId);
-      if (textarea) textarea.value = "";
+      setPastedText("");
     } catch (e) {
       console.error(e);
       setUploadError(e.message || "Error processing text");
@@ -166,349 +181,202 @@ export default function UploadPage() {
     }
   }
 
-  return (
-    <div className="max-w-5xl mx-auto">
-      <header className="mb-12">
-        <h2
-          className="text-4xl font-bold tracking-tight"
-          style={{ color: "var(--dark)" }}
-        >
-          Add to Your Knowledge Base
-        </h2>
-        <p className="text-[#596060] text-lg mt-2">
-          Expand your lexicon by uploading documents or pasting existing study
-          materials.
-        </p>
-      </header>
+  const hasInput = source === "files" ? selectedFiles.length > 0 : pastedText.trim().length > 0;
+  const ctaLabel =
+    source === "files"
+      ? selectedFiles.length > 1
+        ? `Extract from ${selectedFiles.length} files`
+        : "Extract from file"
+      : "Extract from text";
+  const ctaHint = !currentLanguageId
+    ? "Select a language first"
+    : !hasInput
+      ? source === "files"
+        ? "Add a PDF or image to continue"
+        : "Paste some text to continue"
+      : "Our AI reads your material and pulls out vocabulary and grammar for you to review before saving.";
 
-      <section className="grid grid-cols-12 gap-8">
-        <div className="col-span-12 lg:col-span-7 space-y-8">
-          {/* Drop Zone */}
-          <div
-            ref={dropZoneRef}
-            className="bg-white p-12 rounded-3xl border-2 border-dashed border-[#acb3b2]/30 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-[#436565]/40 transition-all"
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              if (dropZoneRef.current)
-                dropZoneRef.current.style.borderColor = "rgba(67,101,101,0.4)";
-            }}
-            onDragLeave={() => {
-              if (dropZoneRef.current)
-                dropZoneRef.current.style.borderColor = "";
-            }}
-            onDrop={handleDrop}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,application/pdf"
-              className="hidden"
-              multiple
-              onChange={handleFileSelect}
-            />
-            <div className="w-20 h-20 bg-[#f1f4f3] rounded-full flex items-center justify-center mb-6 group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[#436565] text-4xl">
-                cloud_upload
-              </span>
-            </div>
-            <h3
-              className="text-xl font-semibold mb-2"
-              style={{ color: "var(--dark)" }}
-            >
-              Drop your files here
-            </h3>
-            <p className="text-[#596060] max-w-xs mb-8">
-              PDF or image (JPEG, PNG, etc.). Our AI will extract the essence of
-              your learning material.
-            </p>
-            <button
-              className="bg-[#e4e9e8] text-[#596060] px-8 py-3 rounded-full font-medium hover:bg-[#dde4e3] transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
+  return (
+    <Page>
+      <PageHeader
+
+        title="Upload Notes"
+        subtitle="Turn your study material into vocabulary and grammar cards."
+        actions={
+          <Button variant="secondary" icon="quiz" onClick={() => navigate(`/${currentLanguageSlug}/placement`)}>
+            Take placement test instead
+          </Button>
+        }
+      />
+
+      <Card padding="md" className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <SectionTitle className="!mb-0">What are you adding?</SectionTitle>
+          <Segmented
+            value={source}
+            onChange={setSource}
+            options={[
+              { value: "files", label: "Files" },
+              { value: "text", label: "Text" },
+            ]}
+          />
+        </div>
+
+        {source === "files" ? (
+          <div className="space-y-4">
+            <div
+              ref={dropZoneRef}
+              className="rounded-2xl border-2 border-dashed border-[rgba(172,179,178,0.45)] bg-[var(--surface-container-low)] p-8 sm:p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-colors hover:border-[var(--primary)] hover:bg-white"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dropZoneRef.current) dropZoneRef.current.style.borderColor = "var(--primary)";
               }}
+              onDragLeave={() => {
+                if (dropZoneRef.current) dropZoneRef.current.style.borderColor = "";
+              }}
+              onDrop={handleDrop}
             >
-              Browse Files
-            </button>
-            {selectedFiles.length > 0 && (
-              <p className="mt-4 text-sm text-[#436565] font-medium">
-                {selectedFiles.length === 1
-                  ? selectedFiles[0].name
-                  : `${selectedFiles.length} files selected`}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                multiple
+                onChange={handleFileSelect}
+              />
+              <IconTile icon="cloud_upload" size="lg" className="!rounded-full mb-4 !bg-white" />
+              <p className="font-semibold text-[var(--dark)]">
+                Drop files here, or <span className="text-[var(--primary)] underline underline-offset-2">browse</span>
               </p>
+              <p className="text-sm text-[var(--accent1)] mt-1">PDF, JPG or PNG · photos of handwritten notes work too</p>
+            </div>
+
+            {selectedFiles.length > 0 && (
+              <ul className="space-y-2">
+                {selectedFiles.map((f, i) => (
+                  <li key={`${f.name}-${i}`} className="flex items-center gap-3 rounded-xl bg-white border border-[rgba(172,179,178,0.25)] px-4 py-3">
+                    <span className="material-symbols-outlined text-[var(--primary)]" style={{ fontSize: 20 }}>
+                      {f.type === "application/pdf" ? "picture_as_pdf" : "image"}
+                    </span>
+                    <span className="flex-1 min-w-0 truncate text-sm font-medium text-[var(--dark)]">{f.name}</span>
+                    <span className="text-xs text-[var(--accent1)] shrink-0">{formatSize(f.size)}</span>
+                    <IconButton icon="close" label="Remove file" size={18} onClick={() => removeFile(i)} className="-mr-2" />
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-
-          {/* Paste Area */}
-          <div className="bg-[#f1f4f3] rounded-3xl p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--primary)" }}
-                >
-                  edit_note
-                </span>
-                <h3
-                  className="font-semibold text-lg"
-                  style={{ color: "var(--dark)" }}
-                >
-                  Paste Text Content
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold tracking-wider text-[#acb3b2] uppercase">
-                Plain Text / Markdown
-              </span>
-            </div>
+        ) : (
+          <div className="space-y-2">
             <textarea
-              id="upload-text-input"
-              className="w-full h-64 bg-white rounded-2xl border-none p-6 text-sm resize-none focus:ring-2 focus:ring-[#436565]/20 transition-all placeholder:text-[#acb3b2]/60"
-              placeholder="Paste your notes, articles, or vocabulary lists here..."
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              className="input-field w-full h-64 rounded-2xl p-5 text-sm resize-none placeholder:text-[var(--outline-variant)]"
+              placeholder={`Paste ${currentLanguageName || "your"} notes, a short article, a vocabulary list — anything you're studying.`}
             />
-          </div>
-        </div>
-
-        <div className="col-span-12 lg:col-span-5 space-y-8">
-          {/* Target Language */}
-          <div className="bg-[#f1f4f3] rounded-3xl p-8">
-            <h3
-              className="font-semibold text-lg mb-6 flex items-center gap-2"
-              style={{ color: "var(--dark)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "var(--primary)" }}
-              >
-                label
-              </span>
-              Target Language
-            </h3>
-            <div className="bg-white rounded-xl py-4 px-5 flex items-center gap-3">
-              <span className="text-2xl">
-                <LangFlag
-                  name={currentLanguageName || ""}
-                  style={{ fontSize: "1.5rem" }}
-                />
-              </span>
-              <div>
-                <div className="font-semibold" style={{ color: "var(--dark)" }}>
-                  {currentLanguageName || "Select a language"}
-                </div>
-                <div className="text-xs text-[#596060]">
-                  Vocabulary will be added to this language
-                </div>
-              </div>
+            <div className="flex justify-between text-xs text-[var(--accent1)] px-1">
+              <span>Plain text or Markdown</span>
+              <span>{pastedText.trim().length.toLocaleString()} characters</span>
             </div>
           </div>
+        )}
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={uploadImage}
-              disabled={selectedFiles.length === 0 || !currentLanguageId}
-              className="w-full py-5 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all flex items-center justify-center gap-3 disabled:opacity-40"
-              style={{
-                background: "var(--primary)",
-                color: "var(--on-primary)",
-                boxShadow: "0 8px 24px rgba(67,101,101,0.15)",
-              }}
-            >
-              <span className="material-symbols-outlined">auto_fix_high</span>
-              Extract from File
-              <CreditIcon />
-            </button>
-            <button
-              onClick={uploadText}
-              className="w-full py-4 rounded-2xl font-medium transition-all flex items-center justify-center gap-3"
-              style={{
-                border: "1px solid var(--outline-variant)",
-                color: "var(--primary)",
-              }}
-            >
-              <span className="material-symbols-outlined">description</span>
-              Extract from Text
-              <CreditIcon />
-            </button>
-          </div>
-
-          {/* Placement Test card */}
-          <div
-            onClick={() => navigate(`/${currentLanguageSlug}/placement`)}
-            className="bg-white rounded-3xl p-6 cursor-pointer hover:shadow-md transition-all group"
-            style={{ boxShadow: "0 4px 16px rgba(45,52,51,0.04)" }}
+        <div className="mt-6 pt-6 border-t border-[rgba(172,179,178,0.2)] flex flex-col sm:flex-row sm:items-center gap-4">
+          <p className={`text-sm flex-1 ${hasInput && currentLanguageId ? "text-[var(--accent1)]" : "text-[var(--outline-variant)]"}`}>
+            {ctaHint}
+          </p>
+          <Button
+            size="lg"
+            icon="auto_fix_high"
+            onClick={source === "files" ? uploadImage : uploadText}
+            disabled={!hasInput || !currentLanguageId}
+            className="sm:shrink-0"
           >
-            <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                style={{ background: "var(--primary)" }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--on-primary)", fontSize: 22 }}
-                >
-                  check_circle
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div
-                  className="font-semibold text-sm"
-                  style={{ color: "var(--dark)" }}
-                >
-                  Take Placement Test
-                </div>
-                <div className="text-xs text-[#596060] mt-0.5">
-                  Determine your level and auto-generate vocabulary
-                </div>
-              </div>
-              <span
-                className="material-symbols-outlined text-[#acb3b2] group-hover:text-[#436565] transition-colors"
-                style={{ fontSize: 20 }}
-              >
-                arrow_forward
-              </span>
-            </div>
-          </div>
+            {ctaLabel}
+            <CreditIcon />
+          </Button>
         </div>
-      </section>
-
-      {/* Pending Grammar — needs user decision */}
-      {pendingGrammar.length > 0 && (
-        <div className="mt-12">
-          <div
-            className="bg-white rounded-3xl p-8"
-            style={{ boxShadow: "0 8px 32px rgba(45,52,51,0.06)" }}
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-amber-500">
-                help
-              </span>
-              <h3
-                className="text-2xl font-bold tracking-tight"
-                style={{ color: "var(--dark)" }}
-              >
-                Grammar Review Needed
-              </h3>
-            </div>
-            <p className="text-[#596060] text-sm mb-6">
-              These concepts are similar to ones you already have. Choose
-              whether to merge with the existing card or create a new one.
-            </p>
-            <div className="space-y-6">
-              {pendingGrammar.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border border-amber-200 bg-amber-50 rounded-2xl p-6"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {/* Candidate */}
-                    <div className="bg-white rounded-xl p-4 border border-amber-100">
-                      <div className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2">
-                        New — from your notes
-                      </div>
-                      <div
-                        className="font-semibold text-base mb-1"
-                        style={{ color: "var(--dark)" }}
-                      >
-                        {item.candidate.concept_name}
-                      </div>
-                      {item.candidate.description && (
-                        <p className="text-sm text-[#596060]">
-                          {item.candidate.description}
-                        </p>
-                      )}
-                      {item.candidate.examples && (
-                        <p className="text-xs text-[#8a9494] mt-1 italic">
-                          {item.candidate.examples}
-                        </p>
-                      )}
-                    </div>
-                    {/* Existing */}
-                    <div className="bg-white rounded-xl p-4 border border-[#e0e7e6]">
-                      <div className="text-xs font-bold text-[#436565] uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <span>Existing card</span>
-                        <span className="text-[#acb3b2] font-normal ml-auto">
-                          {Math.round(item.similarity * 100)}% similar
-                        </span>
-                      </div>
-                      <div
-                        className="font-semibold text-base mb-1"
-                        style={{ color: "var(--dark)" }}
-                      >
-                        {item.similar_card.concept_name}
-                      </div>
-                      {item.similar_card.description && (
-                        <p className="text-sm text-[#596060]">
-                          {item.similar_card.description}
-                        </p>
-                      )}
-                      {item.similar_card.examples && (
-                        <p className="text-xs text-[#8a9494] mt-1 italic">
-                          {item.similar_card.examples}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={() => resolvePending(idx, "merge")}
-                      disabled={resolvingIndex === idx}
-                      className="px-5 py-2.5 rounded-xl font-medium text-sm transition-all disabled:opacity-50"
-                      style={{
-                        background: "var(--primary)",
-                        color: "var(--on-primary)",
-                      }}
-                    >
-                      {resolvingIndex === idx
-                        ? "Working…"
-                        : "Merge into existing"}
-                    </button>
-                    <button
-                      onClick={() => resolvePending(idx, "create_new")}
-                      disabled={resolvingIndex === idx}
-                      className="px-5 py-2.5 rounded-xl font-medium text-sm border transition-all disabled:opacity-50"
-                      style={{
-                        borderColor: "var(--outline-variant)",
-                        color: "var(--primary)",
-                      }}
-                    >
-                      {resolvingIndex === idx ? "Working…" : "Create new card"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      </Card>
 
       {/* Upload error banner */}
       {uploadError && (
-        <div className="mt-8 bg-red-50 border border-red-200 rounded-2xl px-6 py-4 flex items-start gap-3">
-          <span
-            className="material-symbols-outlined text-red-500 shrink-0 mt-0.5"
-            style={{ fontSize: 20 }}
-          >
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl px-6 py-4 flex items-start gap-3">
+          <span className="material-symbols-outlined text-red-500 shrink-0 mt-0.5" style={{ fontSize: 20 }}>
             error
           </span>
           <div className="flex-1">
-            <div className="font-semibold text-sm text-red-700">
-              Extraction failed
-            </div>
+            <div className="font-semibold text-sm text-red-700">Extraction failed</div>
             <div className="text-sm text-red-600 mt-0.5">{uploadError}</div>
           </div>
-          <button
-            onClick={() => setUploadError(null)}
-            className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 18 }}
-            >
-              close
-            </span>
-          </button>
+          <IconButton icon="close" label="Dismiss" size={18} onClick={() => setUploadError(null)} className="!text-red-400 hover:!text-red-600 hover:!bg-transparent -m-2" />
         </div>
+      )}
+
+      {/* Pending Grammar — needs user decision */}
+      {pendingGrammar.length > 0 && (
+        <Card>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="material-symbols-outlined text-amber-500">help</span>
+            <h3 className="text-lg font-bold text-[var(--dark)]">Grammar Review Needed</h3>
+          </div>
+          <p className="text-[var(--accent1)] text-sm mb-6">
+            These concepts are similar to ones you already have. Choose
+            whether to merge with the existing card or create a new one.
+          </p>
+          <div className="space-y-6">
+            {pendingGrammar.map((item, idx) => (
+              <div
+                key={idx}
+                className="border border-amber-200 bg-amber-50 rounded-2xl p-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Candidate */}
+                  <div className="bg-white rounded-xl p-4 border border-amber-100">
+                    <div className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2">
+                      New — from your notes
+                    </div>
+                    <div className="font-semibold text-base mb-1 text-[var(--dark)]">
+                      {item.candidate.concept_name}
+                    </div>
+                    {item.candidate.description && (
+                      <p className="text-sm text-[var(--accent1)]">{item.candidate.description}</p>
+                    )}
+                    {item.candidate.examples && (
+                      <p className="text-xs text-[#8a9494] mt-1 italic">{item.candidate.examples}</p>
+                    )}
+                  </div>
+                  {/* Existing */}
+                  <div className="bg-white rounded-xl p-4 border border-[#e0e7e6]">
+                    <div className="text-xs font-bold text-[var(--primary)] uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <span>Existing card</span>
+                      <span className="text-[var(--outline-variant)] font-normal ml-auto">
+                        {Math.round(item.similarity * 100)}% similar
+                      </span>
+                    </div>
+                    <div className="font-semibold text-base mb-1 text-[var(--dark)]">
+                      {item.similar_card.concept_name}
+                    </div>
+                    {item.similar_card.description && (
+                      <p className="text-sm text-[var(--accent1)]">{item.similar_card.description}</p>
+                    )}
+                    {item.similar_card.examples && (
+                      <p className="text-xs text-[#8a9494] mt-1 italic">{item.similar_card.examples}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <Button onClick={() => resolvePending(idx, "merge")} disabled={resolvingIndex === idx}>
+                    {resolvingIndex === idx ? "Working…" : "Merge into existing"}
+                  </Button>
+                  <Button variant="secondary" onClick={() => resolvePending(idx, "create_new")} disabled={resolvingIndex === idx}>
+                    {resolvingIndex === idx ? "Working…" : "Create new card"}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* Extraction review modal */}
@@ -518,6 +386,12 @@ export default function UploadPage() {
           onClose={() => setShowReviewModal(false)}
         />
       )}
-    </div>
+    </Page>
   );
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

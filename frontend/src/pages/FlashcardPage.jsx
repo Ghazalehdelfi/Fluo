@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useApp } from "../context/AppContext";
 import { speakText } from "../utils.jsx";
+import {
+  Page,
+  PageHeader,
+  Card,
+  Button,
+  IconTile,
+  Eyebrow,
+  SectionTitle,
+  FluencyBadge,
+  ResultSummary,
+  ResultRow,
+} from "../components/ui/index.jsx";
 
 export default function FlashcardPage() {
   const {
@@ -157,79 +169,51 @@ export default function FlashcardPage() {
   // Setup view
   if (view === "setup") {
     return (
-      <div>
-        <div className="mb-10">
-          <h1
-            className="text-4xl font-extrabold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            {currentLanguageName} Flashcards
-          </h1>
-          <p className="mt-2 text-[#596060]">
-            Review your vocabulary with flashcards
-          </p>
-        </div>
-        <div className="card rounded-2xl p-8 max-w-lg mx-auto">
-          <div className="space-y-6">
+      <Page>
+        <PageHeader
+          title={`${currentLanguageName} Flashcards`}
+          subtitle="Review your vocabulary with flashcards"
+        />
+        <div className="space-y-6">
+          <Card padding="md">
+            <SectionTitle>Show me the word in</SectionTitle>
+            <div className="space-y-6">
             <div>
-              <label
-                className="block text-sm font-medium mb-3"
-                style={{ color: "var(--dark)" }}
-              >
-                Show me the word in
-              </label>
               <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setDirection("target")}
-                  className={`${direction === "target" ? "btn-primary" : "btn-secondary"} px-4 py-3 rounded-xl text-sm font-medium`}
-                >
+                <Button size="lg" variant={direction === "target" ? "primary" : "secondary"} onClick={() => setDirection("target")}>
                   {currentLanguageName}
-                </button>
-                <button
-                  onClick={() => setDirection("native")}
-                  className={`${direction === "native" ? "btn-primary" : "btn-secondary"} px-4 py-3 rounded-xl text-sm font-medium`}
-                >
+                </Button>
+                <Button size="lg" variant={direction === "native" ? "primary" : "secondary"} onClick={() => setDirection("native")}>
                   {nativeLanguage}
-                </button>
+                </Button>
               </div>
             </div>
             <div>
-              <label
-                className="block text-sm font-medium mb-3"
-                style={{ color: "var(--dark)" }}
-              >
-                Filter by fluency
-              </label>
-              <div className="flex gap-2">
+              <SectionTitle>Filter by fluency</SectionTitle>
+              <div className="grid grid-cols-4 gap-2">
                 {["all", "low", "medium", "high"].map((level) => (
-                  <button
+                  <Button
                     key={level}
+                    size="lg"
+                    variant={fluencyFilter === level ? "primary" : "secondary"}
+                    className="capitalize"
                     onClick={() => setFluencyFilter(level)}
-                    className={`${fluencyFilter === level ? "btn-primary" : "btn-secondary"} flex-1 px-4 py-3 rounded-xl text-sm font-medium capitalize`}
                   >
-                    {level === "all"
-                      ? "All"
-                      : level.charAt(0).toUpperCase() + level.slice(1)}
-                  </button>
+                    {level}
+                  </Button>
                 ))}
               </div>
             </div>
-            <div
-              className="text-sm text-center"
-              style={{ color: "var(--accent1)" }}
-            >
+            <div className="text-sm text-center text-[var(--accent1)]">
               {wordCount} words available
             </div>
-            <button
-              onClick={beginFlashcards}
-              disabled={wordCount === 0}
-              className="btn-primary w-full px-4 py-3 rounded-xl text-sm font-medium disabled:opacity-40"
-            >
-              Start Flashcards
-            </button>
-          </div>
+            </div>
+          </Card>
+          <Button size="xl" full icon="style" onClick={beginFlashcards} disabled={wordCount === 0}>
+            Start Flashcards
+          </Button>
         </div>
-      </div>
+      </Page>
     );
   }
 
@@ -242,138 +226,49 @@ export default function FlashcardPage() {
       direction === "target" ? card.target_word : card.native_translation;
     const backWord =
       direction === "target" ? card.native_translation : card.target_word;
-    const badge = (
-      <span
-        className={`fluency-${card.fluency_level} px-2.5 py-1 rounded-full text-xs font-medium`}
-      >
-        {card.fluency_level}
-      </span>
-    );
+    const badge = <FluencyBadge level={card.fluency_level} />;
     const segments = Math.min(total, 10);
     const filled = Math.ceil((num / total) * segments);
+    const sessionStats = [
+      { icon: "check_circle", label: "Correct", value: correctCount },
+      { icon: "close", label: "Wrong", value: wrongCount, iconColor: "#a83836" },
+      { icon: "bolt", label: "Streak", value: streak, primary: true },
+    ];
 
     return (
-      <div>
-        <header className="flex justify-between items-end mb-12">
-          <div className="space-y-2">
-            <span className="text-xs font-bold tracking-[0.1em] uppercase text-[#596060]">
-              Active Session
-            </span>
-            <h2
-              className="text-4xl font-extrabold tracking-tight"
-              style={{ color: "var(--dark)" }}
-            >
-              Flashcards
-            </h2>
-            <div className="flex items-center gap-2 mt-4">
-              <span
-                className="text-sm font-medium"
-                style={{ color: "var(--primary)" }}
-              >
-                Card {num} of {total}
-              </span>
+      <Page>
+        <PageHeader
+          eyebrow="Active Session"
+          title="Flashcards"
+          subtitle={`Card ${num} of ${total}`}
+          actions={
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex gap-1 w-48">
+                {Array.from({ length: segments }, (_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-full"
+                    style={{
+                      height: 6,
+                      background:
+                        i < filled
+                          ? "var(--primary)"
+                          : "var(--surface-container-high)",
+                    }}
+                  />
+                ))}
+              </div>
+              <Button variant="secondary" size="sm" onClick={endSession}>
+                End Session
+              </Button>
             </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex gap-1 w-48 h-1.5">
-              {Array.from({ length: segments }, (_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-full"
-                  style={{
-                    height: 6,
-                    background:
-                      i < filled
-                        ? "var(--primary)"
-                        : "var(--surface-container-high)",
-                  }}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#596060]">
-                Progress
-              </span>
-              <button
-                onClick={endSession}
-                className="btn-secondary px-4 py-2 rounded-xl text-xs font-medium"
-              >
-                End
-              </button>
-            </div>
-          </div>
-        </header>
+          }
+        />
 
         <section className="flex flex-col items-center w-full">
           {/* Mobile stats strip */}
-          <div className="lg:hidden w-full flex gap-3 mb-4">
-            <div
-              className="flex-1 rounded-2xl p-4 flex items-center gap-3"
-              style={{ background: "var(--surface-container-low)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "var(--primary)", fontSize: 20 }}
-              >
-                check_circle
-              </span>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#596060]">
-                  Correct
-                </p>
-                <p
-                  className="text-xl font-extrabold"
-                  style={{ color: "var(--dark)" }}
-                >
-                  {correctCount}
-                </p>
-              </div>
-            </div>
-            <div
-              className="flex-1 rounded-2xl p-4 flex items-center gap-3"
-              style={{ background: "var(--surface-container-low)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#a83836", fontSize: 20 }}
-              >
-                close
-              </span>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#596060]">
-                  Wrong
-                </p>
-                <p
-                  className="text-xl font-extrabold"
-                  style={{ color: "var(--dark)" }}
-                >
-                  {wrongCount}
-                </p>
-              </div>
-            </div>
-            <div
-              className="flex-1 rounded-2xl p-4 flex items-center gap-3"
-              style={{
-                background: "var(--primary)",
-                color: "var(--on-primary)",
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 20 }}
-              >
-                bolt
-              </span>
-              <div>
-                <p
-                  className="text-[10px] font-bold uppercase tracking-widest"
-                  style={{ opacity: 0.8 }}
-                >
-                  Streak
-                </p>
-                <p className="text-xl font-extrabold">{streak}</p>
-              </div>
-            </div>
+          <div className="lg:hidden w-full grid grid-cols-3 gap-3 mb-4">
+            {sessionStats.map((st) => <SessionStat key={st.label} compact {...st} />)}
           </div>
           <div
             className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full"
@@ -491,99 +386,12 @@ export default function FlashcardPage() {
 
             {/* Side panels */}
             <div className="hidden lg:flex lg:col-span-4 flex-col gap-6">
-              <div
-                className="flex-1 rounded-[1.5rem] p-8 flex flex-col justify-center"
-                style={{ background: "var(--surface-container-low)" }}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className="p-3 rounded-xl"
-                    style={{ background: "var(--white)" }}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ color: "var(--primary)" }}
-                    >
-                      check_circle
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#596060]">
-                      Correct
-                    </p>
-                    <p
-                      className="text-3xl font-extrabold"
-                      style={{ color: "var(--dark)" }}
-                    >
-                      {correctCount}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="flex-1 rounded-[1.5rem] p-8 flex flex-col justify-center"
-                style={{ background: "var(--surface-container-low)" }}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className="p-3 rounded-xl"
-                    style={{ background: "var(--white)" }}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ color: "#a83836" }}
-                    >
-                      close
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#596060]">
-                      Wrong
-                    </p>
-                    <p
-                      className="text-3xl font-extrabold"
-                      style={{ color: "var(--dark)" }}
-                    >
-                      {wrongCount}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="flex-1 rounded-[1.5rem] p-8 flex flex-col justify-center"
-                style={{
-                  background: "var(--primary)",
-                  color: "var(--on-primary)",
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className="p-3 rounded-xl"
-                    style={{ background: "rgba(255,255,255,0.15)" }}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ color: "var(--on-primary)" }}
-                    >
-                      bolt
-                    </span>
-                  </div>
-                  <div>
-                    <p
-                      className="text-xs font-bold uppercase tracking-widest"
-                      style={{ opacity: 0.8 }}
-                    >
-                      Streak
-                    </p>
-                    <p className="text-3xl font-extrabold">{streak}</p>
-                  </div>
-                </div>
-              </div>
+              {sessionStats.map((st) => <SessionStat key={st.label} {...st} />)}
             </div>
           </div>
 
           {/* Controls */}
-          <div className="mt-10 glass-controls py-4 px-8 rounded-full flex items-center gap-10">
+          <Card variant="tonal" padding="none" className="mt-8 !rounded-full py-4 px-8 flex items-center gap-10">
             <button
               onClick={() => answer(false)}
               className="flex flex-col items-center gap-1 group"
@@ -676,7 +484,7 @@ export default function FlashcardPage() {
                 Skip
               </span>
             </button>
-          </div>
+          </Card>
 
           <div
             className="hidden lg:flex mt-8 gap-8 text-[11px] font-bold uppercase tracking-[0.15em]"
@@ -711,7 +519,7 @@ export default function FlashcardPage() {
             </span>
           </div>
         </section>
-      </div>
+      </Page>
     );
   }
 
@@ -719,199 +527,71 @@ export default function FlashcardPage() {
   if (view === "results") {
     const total = results.length;
     const correct = results.filter((r) => r.correct).length;
-    const wrong = total - correct;
     return (
-      <div>
-        <div className="mb-10">
-          <span className="text-xs font-bold tracking-[0.1em] text-[#436565] uppercase mb-2 block">
-            Session Complete
-          </span>
-          <h1
-            className="text-4xl font-extrabold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Well Done!
-          </h1>
-          <p className="mt-2 text-[#596060]">Here's how you did</p>
-        </div>
-        <div className="grid grid-cols-12 gap-6 mb-10 max-w-2xl">
-          <div
-            className="col-span-4 rounded-[2rem] p-8"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "var(--surface-container-low)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "var(--primary)" }}
-              >
-                style
-              </span>
-            </div>
-            <div
-              className="text-5xl font-extrabold"
-              style={{ color: "var(--dark)" }}
-            >
-              {total}
-            </div>
-            <div className="text-sm mt-1 font-medium text-[#596060]">
-              Total Cards
-            </div>
-          </div>
-          <div
-            className="col-span-4 rounded-[2rem] p-8"
-            style={{ background: "var(--tertiary-container)" }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "rgba(255,255,255,0.5)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#166534" }}
-              >
-                check_circle
-              </span>
-            </div>
-            <div
-              className="text-5xl font-extrabold"
-              style={{ color: "#166534" }}
-            >
-              {correct}
-            </div>
-            <div className="text-sm mt-1 font-medium text-[#596060]">
-              Correct
-            </div>
-          </div>
-          <div
-            className="col-span-4 rounded-[2rem] p-8"
-            style={{ background: "var(--surface-container-low)" }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "var(--white)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#991b1b" }}
-              >
-                cancel
-              </span>
-            </div>
-            <div
-              className="text-5xl font-extrabold"
-              style={{ color: "#991b1b" }}
-            >
-              {wrong}
-            </div>
-            <div className="text-sm mt-1 font-medium text-[#596060]">Wrong</div>
-          </div>
-        </div>
-        <div
-          className="rounded-[2rem] p-8 max-w-2xl"
-          style={{ background: "var(--surface-container-low)" }}
-        >
-          <h3
-            className="text-lg font-bold mb-4"
-            style={{ color: "var(--dark)" }}
-          >
-            Review
-          </h3>
+      <Page>
+        <PageHeader
+          eyebrow="Session Complete"
+          title="Well Done!"
+          subtitle="Here's how you did"
+          actions={
+            <>
+              <Button onClick={resetSession}>New Session</Button>
+              <Button variant="secondary" onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}>
+                Back to Language
+              </Button>
+            </>
+          }
+        />
+        <ResultSummary total={total} correct={correct} totalLabel="Total Cards" />
+        <Card variant="tonal">
+          <SectionTitle>Review</SectionTitle>
           <div className="space-y-3">
             {results.map((r, i) => (
-              <div
-                key={i}
-                className="rounded-xl px-4 py-3 flex items-center gap-3"
-                style={{
-                  background: "var(--white)",
-                  ...(r.correct
-                    ? { background: "rgba(239, 254, 229, 0.3)" }
-                    : {}),
-                }}
-              >
-                {r.correct ? (
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      color: "#22c55e",
-                      fontSize: 20,
-                      fontVariationSettings: "'FILL' 1",
-                    }}
-                  >
-                    check_circle
-                  </span>
-                ) : (
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      color: "#ef4444",
-                      fontSize: 20,
-                      fontVariationSettings: "'FILL' 1",
-                    }}
-                  >
-                    cancel
-                  </span>
-                )}
-                <span
-                  className="font-bold text-sm"
-                  style={{ color: "var(--dark)" }}
-                >
-                  {r.word}
-                </span>
-                <span className="text-sm" style={{ color: "var(--accent1)" }}>
-                  — {r.translation}
-                </span>
+              <ResultRow key={i} correct={r.correct}>
+                <span className="font-bold text-sm text-[var(--dark)]">{r.word}</span>
+                <span className="text-sm text-[var(--accent1)]">— {r.translation}</span>
                 <button
                   onClick={() => speakText(r.word)}
-                  className="p-1 rounded-full transition-colors"
-                  style={{ color: "var(--outline-variant)" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "var(--primary)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = "var(--outline-variant)")
-                  }
+                  className="p-1 rounded-full transition-colors text-[var(--outline-variant)] hover:text-[var(--primary)]"
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: 18 }}
-                  >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                     volume_up
                   </span>
                 </button>
-                {r.new_fluency && (
-                  <span
-                    className={`ml-auto fluency-${r.new_fluency} px-2 py-0.5 rounded-full text-xs font-medium`}
-                  >
-                    {r.new_fluency}
-                  </span>
-                )}
-              </div>
+                {r.new_fluency && <FluencyBadge level={r.new_fluency} className="ml-auto" />}
+              </ResultRow>
             ))}
           </div>
-        </div>
-        <div className="flex gap-3 mt-8">
-          <button
-            onClick={resetSession}
-            className="btn-primary px-6 py-3 rounded-xl text-sm font-medium"
-          >
-            New Session
-          </button>
-          <button
-            onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}
-            className="btn-secondary px-6 py-3 rounded-xl text-sm font-medium"
-          >
-            Back to Language
-          </button>
-        </div>
-      </div>
+        </Card>
+      </Page>
     );
   }
 
   return null;
+}
+
+function SessionStat({ icon, label, value, iconColor, primary = false, compact = false }) {
+  return (
+    <Card
+      variant={primary ? "primary" : "tonal"}
+      padding={compact ? "sm" : "lg"}
+      className={compact ? "" : "flex-1 flex flex-col justify-center"}
+    >
+      <div className={`flex items-center ${compact ? "gap-3" : "gap-4"}`}>
+        <IconTile
+          icon={icon}
+          size={compact ? "sm" : "md"}
+          tone={primary ? "inverse" : "tonal"}
+          className={primary ? "" : "!bg-white"}
+          style={iconColor ? { color: iconColor } : undefined}
+        />
+        <div>
+          <Eyebrow className={primary ? "!text-[var(--on-primary)] opacity-80" : ""}>{label}</Eyebrow>
+          <p className={`${compact ? "text-xl" : "text-3xl"} font-extrabold ${primary ? "" : "text-[var(--dark)]"}`}>
+            {value}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
+import { Page, PageHeader, Card, Button, EmptyState, LoadingState } from "../components/ui/index.jsx";
 
 // ── Step indicator ────────────────────────────────────────────────
 function StepBar({ current, total }) {
@@ -690,13 +691,13 @@ export default function CreateHomeworkPage({ homeworkId: existingId, editMode })
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={leaveWizard} className="p-2 rounded-xl" style={{ color: "var(--accent1)" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
-        </button>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>{editMode ? "Edit Homework" : "Create Homework"}</h1>
-      </div>
+    <Page>
+      <PageHeader
+        onBack={leaveWizard}
+        title={editMode ? "Edit Homework" : "Create Homework"}
+        subtitle={`Step ${step} of ${STEP_TITLES.length} · ${STEP_TITLES[step - 1]}`}
+        className="!mb-6"
+      />
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {STEP_TITLES.map((title, i) => (
@@ -718,20 +719,18 @@ export default function CreateHomeworkPage({ homeworkId: existingId, editMode })
 
       <StepBar current={step} total={5} />
 
-      <div className="rounded-2xl p-6 mb-6" style={{ background: "var(--surface-container)" }}>
+      <Card variant="tonal" padding="md" className="mb-6">
         {renderStep()}
-      </div>
+      </Card>
 
       <div className="flex items-center justify-between">
-        <button onClick={() => step > 1 ? setStep((s) => s - 1) : leaveWizard()} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--surface-container)", color: "var(--accent1)" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+        <Button variant="secondary" icon="arrow_back" onClick={() => step > 1 ? setStep((s) => s - 1) : leaveWizard()}>
           {step === 1 ? "Cancel" : "Back"}
-        </button>
-        <button onClick={handleNext} disabled={saving} className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--primary)" }}>
+        </Button>
+        <Button onClick={handleNext} disabled={saving} iconRight={step < 5 && !saving ? "arrow_forward" : undefined}>
           {saving ? "Saving..." : step === 5 ? "Done" : step === 1 && !homeworkId ? "Create & Continue" : "Continue"}
-          {step < 5 && !saving && <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_forward</span>}
-        </button>
+        </Button>
       </div>
-    </div>
+    </Page>
   );
 }

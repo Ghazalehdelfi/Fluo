@@ -2,6 +2,17 @@ import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { speakText, buildProficiencyDots } from "../utils.jsx";
 import GrammarDetailModal from "../components/modals/GrammarDetailModal";
+import {
+  Page,
+  PageHeader,
+  Card,
+  Button,
+  IconTile,
+  Segmented,
+  EmptyState,
+  LoadingState,
+  SectionTitle,
+} from "../components/ui/index.jsx";
 
 export default function LanguagePage({ section: initialSection }) {
   const {
@@ -31,17 +42,25 @@ export default function LanguagePage({ section: initialSection }) {
   const [vocabFilter, setVocabFilter] = useState("all");
   const [practiceMenuOpen, setPracticeMenuOpen] = useState(false);
   const [detailGrammar, setDetailGrammar] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setSection(initialSection || "vocabulary");
   }, [initialSection]);
 
   useEffect(() => {
-    if (currentLanguageId) {
-      loadStats();
-      if (section === "vocabulary") loadVocabulary();
-      if (section === "grammar") loadGrammar();
-    }
+    if (!currentLanguageId) return;
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      loadStats(),
+      section === "vocabulary" ? loadVocabulary() : loadGrammar(),
+    ]).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [currentLanguageId, section]);
 
   async function loadStats() {
@@ -87,41 +106,15 @@ export default function LanguagePage({ section: initialSection }) {
       ? vocabulary.filter((v) => v.fluency_level === "low")
       : vocabulary;
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="flex justify-between items-start mb-10">
-        <div>
-          <h1
-            className="text-4xl font-extrabold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            {currentLanguageName}
-          </h1>
-          <p className="mt-2 text-[#596060]">
-            Manage your knowledge base and practice
-          </p>
-        </div>
+  const practiceMenu = (
         <div className="practice-menu">
-          <button
+          <Button
+            size="lg"
+            iconRight="expand_more"
             onClick={() => setPracticeMenuOpen((o) => !o)}
-            className="btn-primary px-6 py-3 rounded-xl text-sm font-medium flex items-center gap-2"
           >
             Start Practice
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
+          </Button>
           {practiceMenuOpen && (
             <div
               className="practice-menu-dropdown"
@@ -174,152 +167,102 @@ export default function LanguagePage({ section: initialSection }) {
             </div>
           )}
         </div>
-      </div>
+  );
+
+  const sectionCards = [
+    {
+      key: "vocabulary",
+      icon: "menu_book",
+      tone: "accent",
+      count: stats.total_vocabulary || 0,
+      label: "Vocabulary Items",
+      fluency: vf,
+    },
+    {
+      key: "grammar",
+      icon: "school",
+      tone: "tonal",
+      count: stats.total_grammar || 0,
+      label: "Grammar Concepts",
+      fluency: gf,
+    },
+  ];
+
+  return (
+    <Page>
+      <PageHeader
+        title={currentLanguageName}
+        subtitle="Manage your knowledge base and practice"
+        actions={practiceMenu}
+      />
 
       {/* Section selector cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
-        <div
-          className={`p-4 sm:p-8 rounded-[2rem] cursor-pointer transition-all ${section === "vocabulary" ? "outline outline-2 outline-[#436565]" : ""}`}
-          style={{
-            background: "var(--white)",
-            boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-          }}
-          onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-5">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: "var(--tertiary-container)" }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "#56634f", fontSize: 28 }}
-                >
-                  menu_book
+        {sectionCards.map((c) => (
+          <Card
+            key={c.key}
+            interactive
+            selected={section === c.key}
+            variant={section === c.key ? "elevated" : "tonal"}
+            padding="md"
+            onClick={() => navigate(`/${currentLanguageSlug}/${c.key}`)}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <IconTile icon={c.icon} tone={c.tone} size="lg" />
+                <div>
+                  <div className="text-3xl font-extrabold tracking-tight text-[var(--dark)]">
+                    {c.count}
+                  </div>
+                  <div className="text-sm font-medium text-[var(--accent1)]">{c.label}</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="fluency-low text-xs px-2.5 py-1 rounded-full font-medium">
+                  {c.fluency.low || 0} low
+                </span>
+                <span className="fluency-medium text-xs px-2.5 py-1 rounded-full font-medium">
+                  {c.fluency.medium || 0} med
+                </span>
+                <span className="fluency-high text-xs px-2.5 py-1 rounded-full font-medium">
+                  {c.fluency.high || 0} high
                 </span>
               </div>
-              <div>
-                <div
-                  className="text-4xl font-extrabold tracking-tight"
-                  style={{ color: "var(--dark)" }}
-                >
-                  {stats.total_vocabulary || 0}
-                </div>
-                <div className="font-medium text-[#596060]">
-                  Vocabulary Items
-                </div>
-              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="fluency-low text-xs px-2.5 py-1 rounded-full font-medium">
-                {vf.low || 0} low
-              </span>
-              <span className="fluency-medium text-xs px-2.5 py-1 rounded-full font-medium">
-                {vf.medium || 0} med
-              </span>
-              <span className="fluency-high text-xs px-2.5 py-1 rounded-full font-medium">
-                {vf.high || 0} high
-              </span>
-            </div>
-          </div>
-        </div>
-        <div
-          className={`p-4 sm:p-8 rounded-[2rem] cursor-pointer transition-all ${section === "grammar" ? "outline outline-2 outline-[#436565]" : ""}`}
-          style={{ background: "var(--surface-container-low)" }}
-          onClick={() => navigate(`/${currentLanguageSlug}/grammar`)}
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-5">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: "var(--surface-container-high)" }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--primary)", fontSize: 28 }}
-                >
-                  school
-                </span>
-              </div>
-              <div>
-                <div
-                  className="text-4xl font-extrabold tracking-tight"
-                  style={{ color: "var(--dark)" }}
-                >
-                  {stats.total_grammar || 0}
-                </div>
-                <div className="font-medium text-[#596060]">
-                  Grammar Concepts
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="fluency-low text-xs px-2.5 py-1 rounded-full font-medium">
-                {gf.low || 0} low
-              </span>
-              <span className="fluency-medium text-xs px-2.5 py-1 rounded-full font-medium">
-                {gf.medium || 0} med
-              </span>
-              <span className="fluency-high text-xs px-2.5 py-1 rounded-full font-medium">
-                {gf.high || 0} high
-              </span>
-            </div>
-          </div>
-        </div>
+          </Card>
+        ))}
       </div>
 
       {/* Vocabulary Section */}
       {section === "vocabulary" && (
-        <div
-          className="rounded-[2rem] p-8"
-          style={{ background: "var(--surface-container-low)" }}
-        >
-          <div className="flex justify-between items-center mb-8 px-4">
-            <h3 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>
-              Vocabulary
-            </h3>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setVocabFilter("all")}
-                className="px-6 py-2 text-sm font-semibold rounded-full transition-colors"
-                style={{
-                  background: vocabFilter === "all" ? "var(--white)" : "",
-                  color: "var(--accent1)",
-                }}
-              >
-                All Words
-              </button>
-              <button
-                onClick={() => setVocabFilter("low")}
-                className="px-6 py-2 text-sm font-semibold rounded-full transition-colors"
-                style={{
-                  background: vocabFilter === "low" ? "var(--white)" : "",
-                  color: "var(--accent1)",
-                }}
-              >
-                Needs Practice
-              </button>
-            </div>
-          </div>
-          {filteredVocab.length === 0 ? (
-            <div className="p-12 text-center text-[#596060] text-sm">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: "var(--surface-container-high)" }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--accent1)", fontSize: 28 }}
-                >
-                  menu_book
-                </span>
-              </div>
-              <p className="font-medium" style={{ color: "var(--dark)" }}>
-                No vocabulary yet
-              </p>
-              <p className="mt-1">Upload some notes to get started!</p>
-            </div>
+        <Card variant="tonal">
+          <SectionTitle
+            actions={
+              <Segmented
+                value={vocabFilter}
+                onChange={setVocabFilter}
+                options={[
+                  { value: "all", label: "All Words" },
+                  { value: "low", label: "Needs Practice" },
+                ]}
+              />
+            }
+          >
+            Vocabulary
+          </SectionTitle>
+          {loading ? (
+            <LoadingState text="Loading vocabulary…" />
+          ) : filteredVocab.length === 0 ? (
+            <EmptyState
+              icon="menu_book"
+              title="No vocabulary yet"
+              description="Upload some notes to get started!"
+              action={
+                <Button variant="secondary" icon="upload_file" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
+                  Upload Notes
+                </Button>
+              }
+            />
           ) : (
             <>
               {/* Mobile card list */}
@@ -514,38 +457,26 @@ export default function LanguagePage({ section: initialSection }) {
               </div>
             </>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Grammar Section */}
       {section === "grammar" && (
-        <div
-          className="rounded-[2rem] p-8"
-          style={{ background: "var(--surface-container-low)" }}
-        >
-          <div className="flex justify-between items-center mb-8 px-4">
-            <h3 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>
-              Grammar Concepts
-            </h3>
-          </div>
-          {grammar.length === 0 ? (
-            <div className="p-12 text-center text-[#596060] text-sm">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: "var(--surface-container-high)" }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--accent1)", fontSize: 28 }}
-                >
-                  school
-                </span>
-              </div>
-              <p className="font-medium" style={{ color: "var(--dark)" }}>
-                No grammar concepts yet
-              </p>
-              <p className="mt-1">Upload some notes to get started!</p>
-            </div>
+        <Card variant="tonal">
+          <SectionTitle>Grammar Concepts</SectionTitle>
+          {loading ? (
+            <LoadingState text="Loading grammar…" />
+          ) : grammar.length === 0 ? (
+            <EmptyState
+              icon="school"
+              title="No grammar concepts yet"
+              description="Upload some notes to get started!"
+              action={
+                <Button variant="secondary" icon="upload_file" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
+                  Upload Notes
+                </Button>
+              }
+            />
           ) : (
             <div className="space-y-4">
               {grammar.map((g) => (
@@ -661,7 +592,7 @@ export default function LanguagePage({ section: initialSection }) {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {detailGrammar && (
@@ -670,6 +601,6 @@ export default function LanguagePage({ section: initialSection }) {
           onClose={() => setDetailGrammar(null)}
         />
       )}
-    </div>
+    </Page>
   );
 }

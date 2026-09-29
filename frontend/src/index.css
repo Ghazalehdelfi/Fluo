@@ -135,9 +135,9 @@ body {
 .flashcard-front, .flashcard-back {
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%;
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 3rem;
+  padding: 2rem;
   background: var(--white);
   box-shadow: 0 8px 32px rgba(45, 52, 51, 0.06);
   overflow: hidden;
@@ -169,10 +169,6 @@ body {
 }
 .fc-sound-btn:hover { background: var(--primary-container); transform: scale(1.05); }
 
-.glass-controls {
-  background: rgba(248, 250, 249, 0.8);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-}
 
 /* Practice menu */
 .practice-menu { position: relative; display: inline-block; }
@@ -252,6 +248,78 @@ body {
 }
 .lang-switcher-option:hover { background: var(--surface-container-low); }
 .lang-switcher-option.active { background: var(--surface-container-high); font-weight: 600; }
+
+/* Fluō bird: fly in -> land -> idle */
+.fluo-bird { overflow: visible; }
+.fluo-bird-flight {
+  transform: translate(160px, 122px);
+  animation: fluo-fly 2.4s cubic-bezier(0.25, 0.7, 0.3, 1) both;
+}
+@keyframes fluo-fly {
+  0%   { transform: translate(-90px, 10px) rotate(-8deg) scale(0.8); opacity: 0; }
+  12%  { opacity: 1; }
+  40%  { transform: translate(40px, 46px) rotate(-10deg) scale(0.92); }
+  75%  { transform: translate(128px, 96px) rotate(6deg) scale(1); }
+  92%  { transform: translate(158px, 118px) rotate(-2deg) scale(1); }
+  100% { transform: translate(160px, 122px) rotate(0deg) scale(1); }
+}
+.fluo-wing {
+  transform-box: fill-box;
+  transform-origin: 15% 85%;
+  animation: fluo-flap 0.3s ease-in-out 8 alternate;
+}
+.fluo-wing-back { animation-delay: 0.05s; }
+@keyframes fluo-flap {
+  from { transform: rotate(-38deg) scaleY(1.15); }
+  to   { transform: rotate(22deg)  scaleY(0.9); }
+}
+.fluo-feet {
+  opacity: 0;
+  animation: fluo-fade-in 0.35s ease-out 2.15s forwards;
+}
+@keyframes fluo-fade-in { to { opacity: 1; } }
+.fluo-bird-idle {
+  animation: fluo-bob 3.2s ease-in-out 2.6s infinite;
+}
+@keyframes fluo-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-3px) rotate(-1.5deg); }
+}
+.fluo-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fluo-blink 4.5s ease-in-out 3.2s infinite;
+}
+@keyframes fluo-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.1); }
+}
+.fluo-branch {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fluo-branch-sway 0.9s ease-out 2.25s 1;
+}
+@keyframes fluo-branch-sway {
+  0%   { transform: rotate(0deg) translateY(0); }
+  30%  { transform: rotate(0.8deg) translateY(3px); }
+  65%  { transform: rotate(-0.4deg) translateY(-1px); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fluo-bird-flight, .fluo-wing, .fluo-bird-idle, .fluo-eye, .fluo-branch { animation: none; }
+  .fluo-feet { opacity: 1; animation: none; }
+}
+
+/* Dashboard hero */
+.dash-hero-glow {
+  position: absolute; border-radius: 50%; filter: blur(48px); pointer-events: none;
+}
+.dash-pop-in { animation: dash-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes dash-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .dash-pop-in { animation: none; } }
 
 /* Chat bubbles */
 .message-bubble-in { border-bottom-left-radius: 4px; }

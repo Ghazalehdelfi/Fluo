@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../context/AppContext";
+import { Page, PageHeader, Card, Button, EmptyState, LoadingState, SectionTitle } from "../components/ui/index.jsx";
 
 function ClassCodeBadge({ code }) {
   const [copied, setCopied] = useState(false);
@@ -113,75 +114,67 @@ export default function TeacherClassesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
-      </div>
+      <Page>
+        <LoadingState />
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--dark)" }}>My Classes</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--accent1)" }}>{classes.length} class{classes.length !== 1 ? "es" : ""}</p>
-        </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white"
-          style={{ background: "var(--primary)" }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-          New Class
-        </button>
-      </div>
+    <Page>
+      <PageHeader
+        title="My Classes"
+        subtitle={`${classes.length} class${classes.length !== 1 ? "es" : ""}`}
+        actions={
+          <Button icon="add" onClick={() => setShowCreate(true)}>
+            New Class
+          </Button>
+        }
+      />
 
       {classes.length === 0 ? (
-        <div className="text-center py-20" style={{ color: "var(--accent1)" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 56 }}>groups</span>
-          <p className="mt-4 text-lg font-medium">No classes yet</p>
-          <p className="text-sm mt-1">Create your first class to get started</p>
-        </div>
+        <Card>
+          <EmptyState
+            icon="groups"
+            title="No classes yet"
+            description="Create your first class to get started"
+            action={<Button icon="add" onClick={() => setShowCreate(true)}>New Class</Button>}
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Class list */}
           <div className="lg:col-span-1 space-y-3">
             {classes.map((cls) => (
-              <div
+              <Card
                 key={cls.id}
+                interactive
+                padding="sm"
+                variant={selectedClass?.id === cls.id ? "primary" : "tonal"}
+                className="!rounded-2xl"
                 onClick={() => loadClassDetail(cls)}
-                className="p-4 rounded-2xl cursor-pointer transition-all"
-                style={{
-                  background: selectedClass?.id === cls.id ? "var(--primary)" : "var(--surface-container)",
-                  color: selectedClass?.id === cls.id ? "white" : "var(--dark)",
-                }}
               >
                 <p className="font-semibold">{cls.name}</p>
                 <p className="text-sm mt-1 opacity-70">{cls.student_count} student{cls.student_count !== 1 ? "s" : ""}</p>
-              </div>
+              </Card>
             ))}
           </div>
 
           {/* Class detail */}
           <div className="lg:col-span-2">
             {selectedClass ? (
-              <div className="rounded-2xl p-6" style={{ background: "var(--surface-container)" }}>
+              <Card variant="tonal" padding="md">
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h2 className="text-xl font-bold" style={{ color: "var(--dark)" }}>{selectedClass.name}</h2>
+                    <h2 className="text-lg font-bold" style={{ color: "var(--dark)" }}>{selectedClass.name}</h2>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-sm" style={{ color: "var(--accent1)" }}>Class code:</span>
                       <ClassCodeBadge code={selectedClass.class_code} />
                     </div>
                   </div>
-                  <button
-                    onClick={() => navigate("/teacher/homework")}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
-                    style={{ background: "rgba(67,101,101,0.1)", color: "var(--primary)" }}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>assignment</span>
+                  <Button variant="secondary" size="sm" icon="assignment" onClick={() => navigate("/teacher/homework")}>
                     Homework
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Students */}
@@ -194,7 +187,7 @@ export default function TeacherClassesPage() {
                   ) : (
                     <div className="space-y-2">
                       {selectedClass.students.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: "var(--surface)" }}>
+                        <div key={s.id} className="flex items-center justify-between py-2 px-3 rounded-xl bg-white">
                           <span className="text-sm font-medium" style={{ color: "var(--dark)" }}>{s.email}</span>
                           <button
                             onClick={() => removeStudent(s.id)}
@@ -221,25 +214,19 @@ export default function TeacherClassesPage() {
                       onChange={(e) => { setAddEmail(e.target.value); setAddError(""); }}
                       onKeyDown={(e) => e.key === "Enter" && addStudent()}
                       placeholder="student@example.com"
-                      className="flex-1 px-3 py-2 rounded-xl text-sm border"
-                      style={{ background: "var(--surface)", borderColor: "rgba(172,179,178,0.3)", color: "var(--dark)" }}
+                      className="input-field flex-1 px-4 py-2.5 rounded-xl text-sm"
                     />
-                    <button
-                      onClick={addStudent}
-                      disabled={addingStudent || !addEmail.trim()}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-                      style={{ background: "var(--primary)" }}
-                    >
+                    <Button onClick={addStudent} disabled={addingStudent || !addEmail.trim()}>
                       {addingStudent ? "Adding..." : "Add"}
-                    </button>
+                    </Button>
                   </div>
                   {addError && <p className="text-xs mt-2 text-red-500">{addError}</p>}
                 </div>
-              </div>
+              </Card>
             ) : (
-              <div className="flex items-center justify-center h-48 rounded-2xl" style={{ background: "var(--surface-container)", color: "var(--accent1)" }}>
-                <p className="text-sm">Select a class to view details</p>
-              </div>
+              <Card variant="tonal" padding="none">
+                <EmptyState icon="touch_app" title="Select a class" description="Pick a class on the left to view its students and code." />
+              </Card>
             )}
           </div>
         </div>
@@ -247,30 +234,29 @@ export default function TeacherClassesPage() {
 
       {/* Create class modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)" }}>
-            <h2 className="text-lg font-bold mb-4" style={{ color: "var(--dark)" }}>New Class</h2>
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+          <Card padding="md" className="w-full max-w-sm shadow-2xl">
+            <SectionTitle>New Class</SectionTitle>
             <input
               type="text"
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && createClass()}
               placeholder="e.g. Spanish B1 Morning Group"
-              className="w-full px-3 py-2.5 rounded-xl text-sm border mb-4"
-              style={{ background: "var(--surface-container)", borderColor: "rgba(172,179,178,0.3)", color: "var(--dark)" }}
+              className="input-field w-full px-4 py-2.5 rounded-xl text-sm mb-4"
               autoFocus
             />
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreate(false); setNewClassName(""); }} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--surface-container)", color: "var(--accent1)" }}>
+              <Button variant="secondary" className="flex-1" onClick={() => { setShowCreate(false); setNewClassName(""); }}>
                 Cancel
-              </button>
-              <button onClick={createClass} disabled={creating || !newClassName.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--primary)" }}>
+              </Button>
+              <Button className="flex-1" onClick={createClass} disabled={creating || !newClassName.trim()}>
                 {creating ? "Creating..." : "Create"}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
-    </div>
+    </Page>
   );
 }

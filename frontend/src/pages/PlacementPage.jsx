@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import CreditIcon from "../components/CreditIcon";
 import { useApp } from "../context/AppContext.jsx";
+import {
+  Page,
+  PageHeader,
+  Card,
+  Button,
+  IconTile,
+  ProgressBar,
+  SectionTitle,
+} from "../components/ui/index.jsx";
 
 export default function PlacementPage() {
   const {
@@ -203,105 +212,39 @@ export default function PlacementPage() {
   // ---- Choice View ----
   if (view === "choice") {
     return (
-      <div>
-        <header className="mb-12">
-          <h2
-            className="text-4xl font-bold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Get Started with {currentLanguageName}
-          </h2>
-          <p className="text-[#596060] mt-2 text-lg">
-            Choose how you'd like to start building your knowledge base
-          </p>
-        </header>
-        <div className="grid grid-cols-2 gap-6 max-w-3xl">
-          <div
-            onClick={startTest}
-            className="rounded-3xl p-10 cursor-pointer transition-all hover:shadow-lg group"
-            style={{
-              background: "var(--primary)",
-              color: "var(--on-primary)",
-              boxShadow: "0 8px 32px rgba(67,101,101,0.15)",
-            }}
-          >
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-8"
-              style={{ background: "rgba(255,255,255,0.15)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "var(--on-primary)", fontSize: 30 }}
-              >
-                quiz
-              </span>
-            </div>
-            <h3 className="text-2xl font-bold mb-3">Take Placement Test</h3>
-            <p className="text-sm" style={{ opacity: 0.8 }}>
+      <Page>
+        <PageHeader
+          title={`Get Started with ${currentLanguageName}`}
+          subtitle="Choose how you'd like to start building your knowledge base"
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Card variant="primary" interactive onClick={startTest} className="group">
+            <IconTile icon="quiz" size="lg" tone="inverse" className="mb-6" />
+            <h3 className="text-xl font-bold mb-2">Take Placement Test</h3>
+            <p className="text-sm opacity-80">
               Answer questions to determine your level and get a personalised
               vocabulary list
             </p>
-            <div className="mt-8 flex items-center gap-2 text-sm font-medium">
+            <div className="mt-6 flex items-center gap-2 text-sm font-semibold">
               <span>Start test</span>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18 }}
-              >
-                arrow_forward
-              </span>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 15, opacity: 0.75 }}
-                title="This action uses AI and will consume credits"
-              >
-                toll
-              </span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+              <CreditIcon size={15} />
             </div>
-          </div>
-          <div
-            onClick={() => navigate(`/${currentLanguageSlug}/notes`)}
-            className="rounded-3xl p-10 cursor-pointer transition-all hover:shadow-md group"
-            style={{
-              background: "var(--surface-container-low)",
-              boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
-            }}
-          >
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-8"
-              style={{ background: "var(--white)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "var(--primary)", fontSize: 30 }}
-              >
-                upload_file
-              </span>
-            </div>
-            <h3
-              className="text-2xl font-bold mb-3"
-              style={{ color: "var(--dark)" }}
-            >
-              Upload Notes
-            </h3>
-            <p className="text-sm text-[#596060]">
+          </Card>
+          <Card variant="tonal" interactive onClick={() => navigate(`/${currentLanguageSlug}/notes`)} className="group">
+            <IconTile icon="upload_file" size="lg" className="mb-6 !bg-white" />
+            <h3 className="text-xl font-bold mb-2 text-[var(--dark)]">Upload Notes</h3>
+            <p className="text-sm text-[var(--accent1)]">
               Already have study materials? Upload them to extract vocabulary
               and grammar
             </p>
-            <div
-              className="mt-8 flex items-center gap-2 text-sm font-medium"
-              style={{ color: "var(--primary)" }}
-            >
+            <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-[var(--primary)]">
               <span>Upload files</span>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18 }}
-              >
-                arrow_forward
-              </span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </Page>
     );
   }
 
@@ -323,48 +266,23 @@ export default function PlacementPage() {
       question.romanization.trim() !== questionText.trim();
 
     return (
-      <div>
-        <header className="mb-10">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>
-              Placement Test
-            </h2>
-            <div className="text-right">
-              <span
-                className="text-sm font-medium"
-                style={{ color: "var(--dark)" }}
-              >
-                Question {questionIndex + 1}
-              </span>
-              <p className="text-xs text-[#596060]">
-                Level {question.level || "—"} · {questionsAtLevel}/
-                {questionsPerLevel} at this level
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-2 rounded-full overflow-hidden"
-            style={{ background: "var(--surface-container-high)" }}
-          >
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${progress}%`, background: "var(--primary)" }}
-            />
-          </div>
-          <p className="text-xs text-[#596060] mt-2">
+      <Page>
+        <PageHeader
+          eyebrow={`Question ${questionIndex + 1}`}
+          title="Placement Test"
+          subtitle={`Level ${question.level || "—"} · ${questionsAtLevel}/${questionsPerLevel} at this level`}
+          className="!mb-6"
+        />
+        <div className="mb-8">
+          <ProgressBar value={progress} />
+          <p className="text-xs text-[var(--accent1)] mt-2">
             The test adapts to your level — it ends early once your level is
             found, and goes longer if you're doing well.
           </p>
-        </header>
+        </div>
 
-        <div className="max-w-2xl">
-          <div
-            className="rounded-2xl p-8 mb-6"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-            }}
-          >
+        <div>
+          <Card className="mb-6">
             <div className="mb-2">
               {question.topic && (
                 <span className="text-xs font-bold uppercase tracking-widest text-[#596060]">
@@ -402,7 +320,7 @@ export default function PlacementPage() {
                 {showRomanization ? "Hide Latin" : "Latin"}
               </button>
             )}
-          </div>
+          </Card>
 
           {feedback && (
             <div
@@ -470,30 +388,27 @@ export default function PlacementPage() {
           )}
 
           <div className="mt-6 flex gap-3">
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
+              icon="help"
               onClick={() => submitAnswer("__dont_know__")}
               disabled={waitingNext}
-              className="btn-secondary flex-none px-6 py-4 rounded-xl font-medium disabled:opacity-40 flex items-center gap-2"
             >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18 }}
-              >
-                help
-              </span>
               Don't know
-            </button>
-            <button
+            </Button>
+            <Button
+              size="lg"
+              className="flex-1"
               onClick={() => submitAnswer()}
               disabled={waitingNext || !(selectedAnswer || textAnswer.trim())}
-              className="btn-primary flex-1 py-4 rounded-xl font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {waitingNext ? "Processing..." : "Submit Answer"}
               {!waitingNext && <CreditIcon />}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Page>
     );
   }
 
@@ -501,45 +416,25 @@ export default function PlacementPage() {
   if (view === "results" && results) {
     const level = results.level || results.determined_level;
     return (
-      <div>
-        <header className="mb-10">
-          <h2
-            className="text-4xl font-bold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Test Complete!
-          </h2>
-          <p className="text-[#596060] mt-2">
-            Your {currentLanguageName} placement result
-          </p>
-        </header>
+      <Page>
+        <PageHeader
+          eyebrow="Session Complete"
+          title="Test Complete!"
+          subtitle={`Your ${currentLanguageName} placement result`}
+        />
 
-        <div className="max-w-2xl">
-          <div
-            className="rounded-3xl p-10 mb-8 flex items-center gap-8"
-            style={{
-              background: "var(--primary)",
-              color: "var(--on-primary)",
-              boxShadow: "0 8px 32px rgba(67,101,101,0.15)",
-            }}
-          >
-            <div className="text-8xl font-extrabold">{level || "—"}</div>
+        <div>
+          <Card variant="primary" className="mb-6 flex items-center gap-8">
+            <div className="text-7xl font-extrabold tracking-tight">{level || "—"}</div>
             <div>
               <p className="text-lg font-bold">Determined Level</p>
-              <p className="text-sm mt-1" style={{ opacity: 0.8 }}>
-                Based on your performance
-              </p>
+              <p className="text-sm mt-1 opacity-80">Based on your performance</p>
             </div>
-          </div>
+          </Card>
 
           {results.breakdown && (
-            <div
-              className="rounded-2xl p-6 mb-8"
-              style={{ background: "var(--surface-container-low)" }}
-            >
-              <h3 className="font-bold mb-4" style={{ color: "var(--dark)" }}>
-                Score Breakdown
-              </h3>
+            <Card variant="tonal" padding="md" className="mb-6">
+              <SectionTitle>Score Breakdown</SectionTitle>
               <table className="w-full text-sm">
                 <tbody>
                   {Object.entries(results.breakdown).map(([k, v]) => (
@@ -564,27 +459,20 @@ export default function PlacementPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Card>
           )}
 
           <div className="flex gap-3">
-            <button
-              onClick={generateContent}
-              className="btn-primary flex-1 py-4 rounded-xl font-semibold flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined">auto_fix_high</span>
+            <Button size="lg" icon="auto_fix_high" className="flex-1" onClick={generateContent}>
               Generate Vocabulary for My Level
               <CreditIcon />
-            </button>
-            <button
-              onClick={() => navigate(`/${currentLanguageSlug}/`)}
-              className="btn-secondary px-6 py-4 rounded-xl font-medium"
-            >
+            </Button>
+            <Button size="lg" variant="secondary" onClick={() => navigate(`/${currentLanguageSlug}/`)}>
               Skip
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Page>
     );
   }
 
@@ -592,50 +480,27 @@ export default function PlacementPage() {
   if (view === "review") {
     const saveButtons = (
       <div className="flex gap-3">
-        <button
-          onClick={saveContent}
-          className="btn-primary px-8 py-4 rounded-xl font-semibold flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined">save</span>
+        <Button size="lg" icon="save" onClick={saveContent}>
           Save to Knowledge Base
-        </button>
-        <button
-          onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}
-          className="btn-secondary px-6 py-4 rounded-xl font-medium"
-        >
+        </Button>
+        <Button size="lg" variant="secondary" onClick={() => navigate(`/${currentLanguageSlug}/vocabulary`)}>
           Skip
-        </button>
+        </Button>
       </div>
     );
 
     return (
-      <div>
-        <header className="mb-6">
-          <h2
-            className="text-4xl font-bold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Review Your Vocabulary
-          </h2>
-          <p className="text-[#596060] mt-2">
-            Edit or remove items before saving to your knowledge base
-          </p>
-        </header>
-
-        <div className="mb-8">{saveButtons}</div>
+      <Page>
+        <PageHeader
+          title="Review Your Vocabulary"
+          subtitle="Edit or remove items before saving to your knowledge base"
+          actions={saveButtons}
+        />
 
         {/* Vocabulary review table */}
         {reviewVocab.length > 0 && (
-          <div
-            className="rounded-2xl p-6 mb-8"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
-            }}
-          >
-            <h3 className="font-bold mb-4" style={{ color: "var(--dark)" }}>
-              Vocabulary ({reviewVocab.length})
-            </h3>
+          <Card padding="md" className="mb-6">
+            <SectionTitle>Vocabulary ({reviewVocab.length})</SectionTitle>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -717,21 +582,13 @@ export default function PlacementPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Grammar review */}
         {reviewGrammar.length > 0 && (
-          <div
-            className="rounded-2xl p-6 mb-8"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
-            }}
-          >
-            <h3 className="font-bold mb-4" style={{ color: "var(--dark)" }}>
-              Grammar ({reviewGrammar.length})
-            </h3>
+          <Card padding="md" className="mb-6">
+            <SectionTitle>Grammar ({reviewGrammar.length})</SectionTitle>
             <div className="space-y-4">
               {reviewGrammar.map((g, i) => (
                 <div
@@ -779,11 +636,11 @@ export default function PlacementPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         )}
 
-        {saveButtons}
-      </div>
+        <div className="flex justify-end">{saveButtons}</div>
+      </Page>
     );
   }
 

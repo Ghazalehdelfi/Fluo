@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useApp } from "../context/AppContext";
+import { Page, PageHeader, Card, Button, EmptyState, LoadingState } from "../components/ui/index.jsx";
 
 // ─── Inline Flashcard Session ────────────────────────────────────────────────
 function FlashcardSession({ deck, onComplete }) {
@@ -259,52 +260,50 @@ export default function StudentHomeworkDetailPage({ homeworkId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
-      </div>
+      <Page>
+        <LoadingState />
+      </Page>
     );
   }
 
   if (!hw) {
     return (
-      <div className="text-center py-20" style={{ color: "var(--accent1)" }}>
-        <p>Homework not found or you don't have access.</p>
-        <button onClick={() => navigate("/homework")} className="mt-4 text-sm font-semibold" style={{ color: "var(--primary)" }}>← Back to Homework</button>
-      </div>
+      <Page>
+        <Card>
+          <EmptyState
+            icon="search_off"
+            title="Homework not found"
+            description="This assignment doesn't exist or you don't have access to it."
+            action={<Button variant="secondary" icon="arrow_back" onClick={() => navigate("/homework")}>Back to Homework</Button>}
+          />
+        </Card>
+      </Page>
     );
   }
 
   const isOverdue = hw.due_date && new Date(hw.due_date) < new Date();
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate("/homework")} className="p-2 rounded-xl" style={{ color: "var(--accent1)" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>{hw.name}</h1>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-            {hw.class_name && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(67,101,101,0.12)", color: "var(--primary)" }}>
-                {hw.class_name}
-              </span>
-            )}
-            {hw.due_date && (
-              <span className="text-xs flex items-center gap-1" style={{ color: isOverdue ? "#ef4444" : "var(--accent1)" }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>calendar_today</span>
-                {isOverdue ? "Overdue: " : "Due: "}{new Date(hw.due_date).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+    <Page>
+      <PageHeader
+        onBack={() => navigate("/homework")}
+        eyebrow={hw.class_name}
+        title={hw.name}
+        subtitle={
+          hw.due_date ? (
+            <span className="inline-flex items-center gap-1 text-sm" style={{ color: isOverdue ? "#ef4444" : undefined }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span>
+              {isOverdue ? "Overdue: " : "Due: "}{new Date(hw.due_date).toLocaleDateString()}
+            </span>
+          ) : undefined
+        }
+        className="!mb-6"
+      />
 
       {hw.description && (
-        <div className="rounded-2xl p-4 mb-5 text-sm" style={{ background: "var(--surface-container)", color: "var(--dark)" }}>
+        <Card variant="tonal" padding="sm" className="mb-5 text-sm text-[var(--dark)]">
           {hw.description}
-        </div>
+        </Card>
       )}
 
       {/* Overall progress */}
@@ -394,13 +393,13 @@ export default function StudentHomeworkDetailPage({ homeworkId }) {
               <p className="text-sm text-center py-4" style={{ color: "var(--accent1)" }}>No conversation topics set for this homework.</p>
             )}
             <div className="pt-1">
-              <button onClick={() => recordCompletion("conversation", null)} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: "var(--primary)" }}>
+              <Button full onClick={() => recordCompletion("conversation", null)}>
                 Mark as Complete
-              </button>
+              </Button>
             </div>
           </div>
         </ExerciseCard>
       </div>
-    </div>
+    </Page>
   );
 }

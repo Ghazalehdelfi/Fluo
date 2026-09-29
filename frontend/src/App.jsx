@@ -494,11 +494,11 @@ export default function App() {
     <AppContext.Provider value={contextValue}>
       <div className="min-h-screen" style={{ background: "var(--surface)" }}>
         {/* Mobile top bar */}
-        <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[var(--paper-raised)] border-b border-[var(--hairline)] z-40 flex items-center px-4 gap-3">
+        <header className="lg:hidden fixed top-0 left-0 right-0 h-14 glass border-b border-[rgba(172,179,178,0.25)] z-40 flex items-center px-4 gap-3">
             <button
               onClick={() => setMobileSidebarOpen(true)}
               className="p-2 rounded-lg"
-              style={{ color: "var(--ink)" }}
+              style={{ color: "var(--dark)" }}
               aria-label="Open menu"
             >
             <span

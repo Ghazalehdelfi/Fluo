@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { getLanguageEmoji, getLanguageSlug, LangFlag } from "../utils.jsx";
+import { getLanguageSlug, LangFlag } from "../utils.jsx";
+import { Page, PageHeader, Card, Button, IconTile, Eyebrow, SectionTitle, LoadingState } from "../components/ui/index.jsx";
+import FluoBird from "../components/FluoBird.jsx";
 
 export default function DashboardPage() {
   const {
@@ -113,69 +115,61 @@ export default function DashboardPage() {
   // Onboarding: pick a language
   if (view === "onboarding-languages") {
     return (
-      <div>
-        <div className="mb-10 text-center">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-            style={{ background: "var(--tertiary-container)" }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: "var(--primary)", fontSize: 40 }}
-            >
-              translate
-            </span>
-          </div>
-          <h1
-            className="text-4xl font-extrabold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Welcome to Fluō
-          </h1>
-          <p className="mt-3 text-lg text-[#596060] max-w-lg mx-auto">
-            Choose a language to start your learning journey. You can always add
-            more later.
-          </p>
+      <Page>
+        <div className="flex justify-center mb-6">
+          <IconTile icon="translate" size="lg" tone="accent" className="!rounded-full w-20 h-20" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-3xl mx-auto mb-8">
+        <PageHeader
+          align="center"
+          title="Welcome to Fluō"
+          subtitle="Choose a language to start your learning journey. You can always add more later."
+        />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-3xl mx-auto">
           {availableLanguages.map((lang) => (
-            <div
+            <Card
               key={lang}
+              interactive
+              padding="md"
+              className="text-center group"
               onClick={() => addLanguageFromOnboarding(lang)}
-              className="p-6 rounded-[2rem] cursor-pointer hover:shadow-lg hover:translate-y-[-2px] transition-all text-center group"
-              style={{
-                background: "var(--white)",
-                boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-              }}
             >
-              <div className="text-4xl mb-3">
+              <div className="mb-3">
                 <LangFlag name={lang} style={{ fontSize: "2.25rem" }} />
               </div>
-              <div
-                className="font-semibold text-lg"
-                style={{ color: "var(--dark)" }}
-              >
-                {lang}
-              </div>
-              <div className="mt-2 text-xs font-medium text-[#596060] group-hover:text-[#436565] transition-colors">
+              <div className="font-semibold text-lg text-[var(--dark)]">{lang}</div>
+              <div className="mt-2 text-xs font-medium text-[var(--accent1)] group-hover:text-[var(--primary)] transition-colors">
                 Start learning →
               </div>
-            </div>
+            </Card>
           ))}
         </div>
-      </div>
+      </Page>
     );
   }
 
   // Normal dashboard
   if (view === "normal" && dashData) {
     const streak = dashData.daily_streak || 0;
-    const streakMsg =
-      streak === 0
-        ? "Practice today to start your streak!"
-        : streak === 1
-          ? "Great start! Keep it going tomorrow."
-          : `Amazing! ${streak} days in a row!`;
+    const practicedToday = !!dashData.practiced_today;
+    const week = dashData.week_activity || Array(7).fill(false);
+    const totalVocab = dashData.total_vocab || 0;
+    const byFluency = dashData.vocab_by_fluency || { high: 0, medium: 0, low: 0 };
+    const needsPractice = byFluency.low || 0;
+
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    const headline = practicedToday
+      ? streak > 1
+        ? `${streak} days and counting. You're on fire.`
+        : "You've already practiced today. Nice."
+      : streak > 0
+        ? `Keep your ${streak}-day streak alive.`
+        : `Ready for some ${currentLanguageName || "practice"} today?`;
+    const nextStep = needsPractice > 0
+      ? `${needsPractice} word${needsPractice === 1 ? "" : "s"} could use a review — a quick flashcard round will do it.`
+      : totalVocab > 0
+        ? "Your vocabulary is in great shape. Try a conversation to put it to work."
+        : "Upload some notes or take the placement test to build your first word list.";
 
     const fluency = dashData.fluency_level || "—";
     const descMap = {
@@ -191,301 +185,167 @@ export default function DashboardPage() {
     };
     const fluencyDesc = descMap[fluency] || "Take a placement test to find out";
 
-    return (
-      <div>
-        <div className="mb-8">
-          <h1
-            className="text-3xl sm:text-4xl font-extrabold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            {currentLanguageName
-              ? `${currentLanguageName} Dashboard`
-              : "Welcome Back"}
-          </h1>
-          <p className="mt-2 text-[#596060]">
-            {currentLanguageName
-              ? `Your ${currentLanguageName} learning overview`
-              : "Your learning overview at a glance"}
-          </p>
-        </div>
+    const actions = [
+      {
+        icon: "style",
+        title: "Flashcards",
+        desc: needsPractice > 0 ? `Review ${needsPractice} word${needsPractice === 1 ? "" : "s"} that need practice` : "Run through your vocabulary",
+        onClick: () => navigateToActiveSection("flashcards"),
+        highlight: needsPractice > 0,
+      },
+      {
+        icon: "forum",
+        title: "Conversation",
+        desc: "Speak with an AI tutor about a topic you choose",
+        onClick: () => navigateToActiveSection("practice"),
+      },
+      {
+        icon: "school",
+        title: "Grammar drill",
+        desc: `${dashData.total_grammar || 0} concept${dashData.total_grammar === 1 ? "" : "s"} ready to practice`,
+        onClick: () => navigateToActiveSection("grammar-practice"),
+      },
+      {
+        icon: "upload_file",
+        title: "Add notes",
+        desc: "Turn study material into new cards",
+        onClick: () => navigateToActiveSection("notes"),
+      },
+    ];
 
-        <div className="grid grid-cols-2 sm:grid-cols-12 gap-4 sm:gap-6 mb-8">
-          {/* Credits */}
+    return (
+      <Page>
+        {/* Hero */}
+        <Card variant="primary" className="overflow-hidden mb-6 dash-pop-in" padding="none">
+          {/* Level pill pinned to the card's top-left, above the bird */}
           <div
-            className="col-span-1 sm:col-span-6 p-6 sm:p-8 rounded-[2rem] relative overflow-hidden flex flex-col justify-between"
-            style={{
-              background: "var(--primary)",
-              color: "var(--on-primary)",
-              minHeight: "13rem",
-            }}
+            className="absolute top-5 left-5 sm:top-6 sm:left-6 z-20 rounded-full px-4 py-2 flex items-center gap-2"
+            style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}
+            title={fluencyDesc}
           >
-            <div style={{ position: "relative", zIndex: 10 }}>
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                style={{ background: "rgba(255,255,255,0.15)" }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--on-primary)" }}
-                >
-                  account_balance_wallet
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
+            <span className="text-xs font-semibold opacity-85">Current level:</span>
+            <span className="text-sm font-extrabold">{fluency}</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+            {/* Bird (left) */}
+            <div className="lg:col-span-5 relative min-h-[220px] sm:min-h-[260px] order-2 lg:order-1">
+              <div className="dash-hero-glow" style={{ left: "-4rem", top: "-4rem", width: "18rem", height: "18rem", background: "#fff", opacity: 0.12 }} />
+              <div className="dash-hero-glow" style={{ right: "-2rem", bottom: "-6rem", width: "16rem", height: "16rem", background: "var(--tertiary-container)", opacity: 0.25 }} />
+              <FluoBird className="absolute inset-0 w-full h-full p-4 sm:p-6" />
+            </div>
+
+            {/* Copy (right) */}
+            <div className="lg:col-span-7 p-6 sm:p-10 lg:pl-4 relative z-10 flex flex-col justify-center order-1 lg:order-2">
+              <Eyebrow className="!text-[var(--on-primary)] opacity-80 mb-3">
+                {greeting}
+              </Eyebrow>
+              <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold tracking-tight leading-[1.1]">
+                {headline}
+              </h1>
+              <p className="mt-4 text-base sm:text-lg opacity-85 max-w-lg">{nextStep}</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button variant="inverse" size="lg" icon="style" onClick={() => navigateToActiveSection("flashcards")}>
+                  {needsPractice > 0 ? "Review now" : "Flashcards"}
+                </Button>
+                <Button variant="outline" size="lg" icon="forum" onClick={() => navigateToActiveSection("practice")}>
+                  Start a conversation
+                </Button>
+              </div>
+              <WeekStrip week={week} streak={streak} className="mt-8" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Next actions */}
+        <SectionTitle className="px-1">Jump back in</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+          {actions.map((a, i) => (
+            <Card
+              key={a.title}
+              interactive
+              padding="md"
+              variant={a.highlight ? "accent" : "elevated"}
+              className="group dash-pop-in"
+              style={{ animationDelay: `${120 + i * 60}ms` }}
+              onClick={a.onClick}
+            >
+              <div className="flex items-start justify-between">
+                <IconTile icon={a.icon} tone={a.highlight ? "primary" : "tonal"} className={a.highlight ? "" : "!bg-[var(--surface-container-low)]"} />
+                <span className="material-symbols-outlined text-[var(--outline-variant)] group-hover:text-[var(--primary)] group-hover:translate-x-0.5 transition-all" style={{ fontSize: 20 }}>
+                  arrow_forward
                 </span>
               </div>
-              <p
-                className="text-xs font-bold uppercase tracking-widest mb-1"
-                style={{ opacity: 0.8 }}
-              >
-                Credits Balance
-              </p>
-              <div className="text-5xl font-extrabold tracking-tight">
-                {Math.round(dashData.credits || 0)} credits
-              </div>
-            </div>
-            <div
-              className="mt-6 flex gap-2 flex-wrap"
-              style={{ position: "relative", zIndex: 10 }}
-            >
-              {[
-                ["5", "$5", "100 credits"],
-                ["10", "$10", "200 credits"],
-                ["20", "$20", "400 credits"],
-              ].map(([pack, price, credits]) => (
-                <button
-                  key={pack}
-                  onClick={() => buyCredits(pack)}
-                  className="py-2 px-4 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 flex flex-col items-center"
-                  style={{
-                    background: "var(--on-primary)",
-                    color: "var(--primary)",
-                  }}
-                >
-                  <span>{price}</span>
-                  <span className="text-xs font-normal opacity-70">
-                    {credits}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                right: "-3rem",
-                bottom: "-3rem",
-                width: "12rem",
-                height: "12rem",
-                background: "white",
-                opacity: 0.08,
-                borderRadius: "50%",
-                filter: "blur(48px)",
-              }}
-            />
-          </div>
-
-          {/* Daily Streak */}
-          <div
-            className="col-span-1 sm:col-span-6 p-6 sm:p-8 rounded-[2rem]"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-              minHeight: "13rem",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "#fff4e6" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#e8760a" }}
-              >
-                local_fire_department
-              </span>
-            </div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
-              Daily Streak
-            </p>
-            <div className="flex items-baseline gap-2">
-              <div
-                className="text-5xl font-extrabold tracking-tight"
-                style={{ color: "var(--dark)" }}
-              >
-                {streak}
-              </div>
-              <span className="text-lg font-medium text-[#596060]">days</span>
-            </div>
-            <p className="mt-3 text-sm text-[#596060]">{streakMsg}</p>
-          </div>
-
-          {/* Vocabulary */}
-          <div
-            className="col-span-1 sm:col-span-4 p-6 sm:p-8 rounded-[2rem] cursor-pointer hover:shadow-md transition-all"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-            }}
-            onClick={() =>
-              currentLanguageSlug &&
-              navigate(`/${currentLanguageSlug}/vocabulary`)
-            }
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "var(--tertiary-container)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#56634f" }}
-              >
-                menu_book
-              </span>
-            </div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
-              Vocabulary
-            </p>
-            <div
-              className="text-5xl font-extrabold tracking-tight"
-              style={{ color: "var(--dark)" }}
-            >
-              {dashData.total_vocab || 0}
-            </div>
-            <p className="mt-2 text-sm text-[#596060]">words learned</p>
-          </div>
-
-          {/* Grammar */}
-          <div
-            className="col-span-1 sm:col-span-4 p-6 sm:p-8 rounded-[2rem] cursor-pointer hover:shadow-md transition-all"
-            style={{ background: "var(--surface-container-low)" }}
-            onClick={() =>
-              currentLanguageSlug && navigate(`/${currentLanguageSlug}/grammar`)
-            }
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "var(--surface-container-high)" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "var(--primary)" }}
-              >
-                school
-              </span>
-            </div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
-              Grammar
-            </p>
-            <div
-              className="text-5xl font-extrabold tracking-tight"
-              style={{ color: "var(--dark)" }}
-            >
-              {dashData.total_grammar || 0}
-            </div>
-            <p className="mt-2 text-sm text-[#596060]">concepts studied</p>
-          </div>
-
-          {/* Fluency */}
-          <div
-            className="col-span-2 sm:col-span-4 p-6 sm:p-8 rounded-[2rem]"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "#e8f5e9" }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ color: "#2e7d32" }}
-              >
-                trending_up
-              </span>
-            </div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1 text-[#596060]">
-              Fluency Level
-            </p>
-            <div
-              className="text-3xl font-extrabold tracking-tight"
-              style={{ color: "var(--dark)" }}
-            >
-              {fluency}
-            </div>
-            <p className="mt-2 text-sm text-[#596060]">{fluencyDesc}</p>
-          </div>
-
-          {/* Quick Actions */}
-          <div
-            className="col-span-2 sm:col-span-12 p-6 sm:p-8 rounded-[2rem] relative overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-            style={{ background: "var(--primary)", color: "var(--on-primary)" }}
-          >
-            <div style={{ position: "relative", zIndex: 10 }}>
-              <p
-                className="text-sm font-bold tracking-widest uppercase mb-2"
-                style={{ opacity: 0.8 }}
-              >
-                Quick Actions
-              </p>
-              <h3 className="text-xl font-bold leading-tight">
-                Continue your learning journey
-              </h3>
-            </div>
-            <div
-              className="flex flex-wrap gap-3"
-              style={{ position: "relative", zIndex: 10 }}
-            >
-              <button
-                onClick={() => navigateToActiveSection("flashcards")}
-                className="py-3 px-6 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95"
-                style={{
-                  background: "var(--on-primary)",
-                  color: "var(--primary)",
-                }}
-              >
-                Flashcards
-              </button>
-              <button
-                onClick={() => navigateToActiveSection("practice")}
-                className="py-3 px-6 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 border border-white/30"
-                style={{ color: "var(--on-primary)" }}
-              >
-                Practice
-              </button>
-              <button
-                onClick={() => navigateToActiveSection("notes")}
-                className="py-3 px-6 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 border border-white/30"
-                style={{ color: "var(--on-primary)" }}
-              >
-                Upload Notes
-              </button>
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                right: "-3rem",
-                bottom: "-3rem",
-                width: "12rem",
-                height: "12rem",
-                background: "white",
-                opacity: 0.08,
-                borderRadius: "50%",
-                filter: "blur(48px)",
-              }}
-            />
-          </div>
+              <div className="mt-4 font-bold text-[var(--dark)]">{a.title}</div>
+              <p className="mt-1 text-sm text-[var(--accent1)]">{a.desc}</p>
+            </Card>
+          ))}
         </div>
-      </div>
+
+        {/* Credits */}
+        <Card variant="tonal" padding="md" className="dash-pop-in flex flex-col sm:flex-row sm:items-center gap-5" style={{ animationDelay: "400ms" }}>
+          <IconTile icon="account_balance_wallet" className="!bg-white" />
+          <div className="flex-1 min-w-0">
+            <Eyebrow className="mb-0.5">Credits</Eyebrow>
+            <div className="text-2xl font-extrabold tracking-tight text-[var(--dark)]">
+              {Math.round(dashData.credits || 0)} <span className="text-sm font-medium text-[var(--accent1)]">available</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["5", "$5", " + 100"],
+              ["10", "$10", " + 200"],
+              ["20", "$20", " + 400"],
+            ].map(([pack, price, credits]) => (
+              <Button key={pack} variant="secondary" size="sm" onClick={() => buyCredits(pack)} className="!bg-white">
+                {price} <span className="font-normal text-[var(--accent1)]">{credits} credits</span>
+              </Button>
+            ))}
+          </div>
+        </Card>
+      </Page>
     );
   }
 
+  return <LoadingState />;
+}
+
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
+function WeekStrip({ week, streak, className = "" }) {
+  // week is oldest -> today; label days relative to today
+  const todayIdx = (new Date().getDay() + 6) % 7; // Monday = 0
   return (
-    <div className="flex items-center justify-center h-48">
-      <div
-        className="w-6 h-6 border-2 rounded-full animate-spin"
-        style={{
-          borderColor: "rgba(67,101,101,0.2)",
-          borderTopColor: "var(--primary)",
-        }}
-      />
+    <div className={`flex items-center gap-4 ${className}`}>
+      <div className="flex gap-2">
+        {week.map((active, i) => {
+          const dayIdx = (todayIdx - (6 - i) + 7) % 7;
+          const isToday = i === 6;
+          return (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                style={{
+                  background: active ? "var(--on-primary)" : "rgba(255,255,255,0.12)",
+                  color: active ? "var(--primary)" : "var(--on-primary)",
+                  boxShadow: isToday ? "0 0 0 2px rgba(255,255,255,0.6)" : "none",
+                  opacity: active || isToday ? 1 : 0.6,
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
+                  {active ? "check" : isToday ? "radio_button_unchecked" : "remove"}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold opacity-70">{DAY_LABELS[dayIdx]}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="text-sm opacity-85">
+        <span className="font-bold">{week.filter(Boolean).length}/7</span> days this week
+        {streak > 1 && <span className="opacity-80"> · {streak}-day streak</span>}
+      </div>
     </div>
   );
 }

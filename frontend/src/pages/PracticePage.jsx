@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import CreditIcon from "../components/CreditIcon";
 import { playAudio } from "../utils.jsx";
 import { useApp } from "../context/AppContext.jsx";
+import { Page, PageHeader, Card, Button, Eyebrow, SectionTitle } from "../components/ui/index.jsx";
 
 export default function PracticePage() {
   const {
@@ -233,145 +234,73 @@ export default function PracticePage() {
 
   // ---- Setup View ----
   if (view === "setup") {
+    const modes = [
+      { key: "lesson", icon: "auto_stories", title: "Lesson", desc: "AI will choose the topic" },
+      { key: "scenario", icon: "theater_comedy", title: "Scenario", desc: "Choose your own topic" },
+    ];
     return (
-      <div>
-        <header className="mb-10">
-          <h2
-            className="text-4xl font-bold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Practice Conversation
-          </h2>
-          <p className="text-[#596060] mt-2">
-            Choose your practice mode and start speaking
-          </p>
-        </header>
+      <Page>
+        <PageHeader
+          title="Practice Conversation"
+          subtitle="Choose your practice mode and start speaking"
+        />
 
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 space-y-8">
+        <div className="space-y-6">
             {/* Mode selector */}
-            <div
-              className="bg-white rounded-2xl p-6"
-              style={{ boxShadow: "0 4px 16px rgba(45,52,51,0.06)" }}
-            >
-              <h3
-                className="font-semibold mb-4"
-                style={{ color: "var(--dark)" }}
-              >
-                Practice Mode
-              </h3>
+            <Card padding="md">
+              <SectionTitle>Practice Mode</SectionTitle>
               <div className="grid grid-cols-2 gap-4">
-                <div
-                  onClick={() => setMode("lesson")}
-                  className={`p-6 rounded-xl cursor-pointer transition-all ${mode === "lesson" ? "outline outline-2 outline-[#436565]" : ""}`}
-                  style={{
-                    background:
-                      mode === "lesson"
-                        ? "var(--surface-container-low)"
-                        : "var(--surface-container-low)",
-                  }}
-                >
-                  <span
-                    className="material-symbols-outlined mb-3 block"
-                    style={{ color: "var(--primary)", fontSize: 28 }}
+                {modes.map((m) => (
+                  <Card
+                    key={m.key}
+                    variant="tonal"
+                    padding="md"
+                    interactive
+                    selected={mode === m.key}
+                    className="!rounded-2xl"
+                    onClick={() => setMode(m.key)}
                   >
-                    auto_stories
-                  </span>
-                  <h4
-                    className="font-semibold"
-                    style={{ color: "var(--dark)" }}
-                  >
-                    Lesson
-                  </h4>
-                  <p className="text-xs mt-1 text-[#596060]">
-                    AI will choose the topic
-                  </p>
-                </div>
-                <div
-                  onClick={() => setMode("scenario")}
-                  className={`p-6 rounded-xl cursor-pointer transition-all ${mode === "scenario" ? "outline outline-2 outline-[#436565]" : ""}`}
-                  style={{ background: "var(--surface-container-low)" }}
-                >
-                  <span
-                    className="material-symbols-outlined mb-3 block"
-                    style={{ color: "var(--primary)", fontSize: 28 }}
-                  >
-                    theater_comedy
-                  </span>
-                  <h4
-                    className="font-semibold"
-                    style={{ color: "var(--dark)" }}
-                  >
-                    Scenario
-                  </h4>
-                  <p className="text-xs mt-1 text-[#596060]">
-                    Choose your own topic
-                  </p>
-                </div>
+                    <span className="material-symbols-outlined mb-3 block text-[var(--primary)]" style={{ fontSize: 28 }}>
+                      {m.icon}
+                    </span>
+                    <h4 className="font-semibold text-[var(--dark)]">{m.title}</h4>
+                    <p className="text-xs mt-1 text-[var(--accent1)]">{m.desc}</p>
+                  </Card>
+                ))}
               </div>
-            </div>
+            </Card>
 
-            {mode === "lesson" && (
-              <>
-                {/* Topic picker */}
-                {topicGroups.length > 0 && (
-                  <div
-                    className="bg-white rounded-2xl p-6"
-                    style={{ boxShadow: "0 4px 16px rgba(45,52,51,0.06)" }}
-                  >
-                    <h3
-                      className="font-semibold mb-4"
-                      style={{ color: "var(--dark)" }}
-                    >
-                      Choose a Topic{" "}
-                      <span className="font-normal text-[#596060]">
-                        (optional)
-                      </span>
-                    </h3>
-                    <div className="space-y-4">
-                      {topicGroups.map((group, gi) => (
-                        <div key={gi}>
-                          <p
-                            className="text-xs font-bold uppercase tracking-widest mb-2"
-                            style={{ color: "var(--primary)" }}
+            {mode === "lesson" && topicGroups.length > 0 && (
+              <Card padding="md">
+                <SectionTitle>
+                  Choose a Topic <span className="font-normal text-[var(--accent1)]">(optional)</span>
+                </SectionTitle>
+                <div className="space-y-4">
+                  {topicGroups.map((group, gi) => (
+                    <div key={gi}>
+                      <Eyebrow tone="primary" className="mb-2">{group.theme}</Eyebrow>
+                      <div className="flex flex-wrap gap-2">
+                        {group.topics.map((t, ti) => (
+                          <button
+                            key={t.id || ti}
+                            onClick={() => setSelectedTopicId(selectedTopicId === t.id ? null : t.id)}
+                            className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${selectedTopicId === t.id ? "btn-primary" : "btn-secondary"}`}
                           >
-                            {group.theme}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {group.topics.map((t, ti) => (
-                              <button
-                                key={t.id || ti}
-                                onClick={() =>
-                                  setSelectedTopicId(
-                                    selectedTopicId === t.id ? null : t.id,
-                                  )
-                                }
-                                className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${selectedTopicId === t.id ? "btn-primary" : "btn-secondary"}`}
-                              >
-                                {t.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                            {t.name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
+                  ))}
+                </div>
+              </Card>
             )}
 
             {mode === "scenario" && (
-              <div
-                className="bg-white rounded-2xl p-6"
-                style={{ boxShadow: "0 4px 16px rgba(45,52,51,0.06)" }}
-              >
-                <h3
-                  className="font-semibold mb-4"
-                  style={{ color: "var(--dark)" }}
-                >
-                  Describe Your Scenario{" "}
-                  <span className="font-normal text-[#596060]">(optional)</span>
-                </h3>
+              <Card padding="md">
+                <SectionTitle>
+                  Describe Your Scenario <span className="font-normal text-[var(--accent1)]">(optional)</span>
+                </SectionTitle>
                 <textarea
                   className="input-field w-full p-4 rounded-xl text-sm resize-none"
                   rows={4}
@@ -379,149 +308,56 @@ export default function PracticePage() {
                   value={customScenario}
                   onChange={(e) => setCustomScenario(e.target.value)}
                 />
-              </div>
+              </Card>
             )}
 
             {vocabCount === 0 && (
-              <div
-                className="rounded-2xl p-6"
-                style={{
-                  background: "rgba(254,242,242,0.7)",
-                  border: "1px solid #fca5a5",
-                }}
-              >
+              <div className="rounded-2xl p-6 bg-red-50 border border-red-200">
                 <div className="flex items-start gap-3">
-                  <span
-                    className="material-symbols-outlined shrink-0"
-                    style={{ color: "#991b1b" }}
-                  >
-                    info
-                  </span>
+                  <span className="material-symbols-outlined shrink-0 text-red-800">info</span>
                   <div>
-                    <h4 className="font-semibold" style={{ color: "#991b1b" }}>
-                      No vocabulary yet
-                    </h4>
-                    <p className="text-sm mt-1" style={{ color: "#991b1b" }}>
+                    <h4 className="font-semibold text-red-800">No vocabulary yet</h4>
+                    <p className="text-sm mt-1 text-red-800">
                       Conversations are built from your personal vocabulary. Add
-                      some {currentLanguageName} words first to start
-                      practicing.
+                      some {currentLanguageName} words first to start practicing.
                     </p>
                     <div className="flex flex-wrap gap-2 mt-4">
-                      <button
-                        onClick={() =>
-                          navigate(`/${currentLanguageSlug}/notes`)
-                        }
-                        className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"
-                      >
+                      <Button size="sm" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
                         Upload Notes
-                      </button>
-                      <button
-                        onClick={() =>
-                          navigate(`/${currentLanguageSlug}/placement`)
-                        }
-                        className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium"
-                      >
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => navigate(`/${currentLanguageSlug}/placement`)}>
                         Take Placement Test
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            <button
-              onClick={startSession}
-              disabled={vocabCount === 0}
-              className="btn-primary w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span className="material-symbols-outlined">mic</span>
+            <Button size="xl" full icon="mic" onClick={startSession} disabled={vocabCount === 0}>
               Start Session
               <CreditIcon />
-            </button>
-          </div>
-
-          <div className="lg:col-span-4">
-            <div className="rounded-2xl p-6 bg-[#f1f4f3]">
-              <h3
-                className="font-semibold mb-4"
-                style={{ color: "var(--dark)" }}
-              >
-                Tips
-              </h3>
-              <ul className="space-y-3 text-sm text-[#596060]">
-                <li className="flex gap-2">
-                  <span
-                    className="material-symbols-outlined text-base"
-                    style={{ color: "var(--primary)" }}
-                  >
-                    check
-                  </span>
-                  Speak clearly at a natural pace
-                </li>
-                <li className="flex gap-2">
-                  <span
-                    className="material-symbols-outlined text-base"
-                    style={{ color: "var(--primary)" }}
-                  >
-                    check
-                  </span>
-                  Try not to switch to English
-                </li>
-                <li className="flex gap-2">
-                  <span
-                    className="material-symbols-outlined text-base"
-                    style={{ color: "var(--primary)" }}
-                  >
-                    check
-                  </span>
-                  You can also type if you prefer
-                </li>
-                <li className="flex gap-2">
-                  <span
-                    className="material-symbols-outlined text-base"
-                    style={{ color: "var(--primary)" }}
-                  >
-                    check
-                  </span>
-                  End the session anytime to get feedback
-                </li>
-              </ul>
-            </div>
-          </div>
+            </Button>
         </div>
-      </div>
+      </Page>
     );
   }
 
   // ---- Active Conversation View ----
   if (view === "active") {
     return (
-      <div className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
-        <header className="flex justify-between items-center mb-6 shrink-0">
-          <div>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--dark)" }}>
-              Practice Session
-            </h2>
-            <p className="text-sm text-[#596060]">
-              {currentLanguageName} —{" "}
-              {mode === "lesson" ? "Lesson" : "Scenario"}
-            </p>
-          </div>
-          <button
-            onClick={endConversation}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{
-              background: "#fef2f2",
-              color: "#ef4444",
-              border: "1px solid #fca5a5",
-            }}
-          >
-            <span className="material-symbols-outlined text-base">
-              stop_circle
-            </span>
-            End &amp; Analyse
-          </button>
-        </header>
+      <Page className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
+        <PageHeader
+          eyebrow="Active Session"
+          title="Practice Session"
+          subtitle={`${currentLanguageName} — ${mode === "lesson" ? "Lesson" : "Scenario"}`}
+          className="!mb-6 shrink-0"
+          actions={
+            <Button variant="danger" icon="stop_circle" onClick={endConversation}>
+              End &amp; Analyse
+            </Button>
+          }
+        />
 
         <div className="flex-1 overflow-y-auto space-y-4 px-2 pb-4">
           {messages.map((msg, i) => (
@@ -539,15 +375,7 @@ export default function PracticePage() {
           <div className="flex items-center gap-3">
             <button
               onClick={recording ? stopRecording : startRecording}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${recording ? "bg-red-500 text-white" : ""}`}
-              style={
-                !recording
-                  ? {
-                      background: "var(--surface-container-low)",
-                      color: "var(--primary)",
-                    }
-                  : {}
-              }
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${recording ? "bg-red-500 text-white" : "bg-[var(--surface-container-low)] text-[var(--primary)]"}`}
             >
               <span className="material-symbols-outlined">
                 {recording ? "stop" : "mic"}
@@ -567,78 +395,49 @@ export default function PracticePage() {
             <button
               onClick={sendText}
               disabled={!inputText.trim() || isTyping}
-              className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-40"
-              style={{
-                background: "var(--primary)",
-                color: "var(--on-primary)",
-              }}
+              className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-40 bg-[var(--primary)] text-[var(--on-primary)]"
             >
               <span className="material-symbols-outlined">send</span>
             </button>
           </div>
           {recording && (
-            <p
-              className="text-xs text-center mt-2 font-medium animate-pulse"
-              style={{ color: "#ef4444" }}
-            >
+            <p className="text-xs text-center mt-2 font-medium animate-pulse text-red-500">
               Recording... tap stop when done
             </p>
           )}
         </div>
-      </div>
+      </Page>
     );
   }
 
   // ---- Analysis View ----
   if (view === "analysis" && analysis) {
     return (
-      <div>
-        <header className="mb-10">
-          <h2
-            className="text-4xl font-bold tracking-tight"
-            style={{ color: "var(--dark)" }}
-          >
-            Session Analysis
-          </h2>
-          <p className="text-[#596060] mt-2">Here's how you did</p>
-        </header>
+      <Page>
+        <PageHeader
+          eyebrow="Session Complete"
+          title="Session Analysis"
+          subtitle="Here's how you did"
+          actions={<Button onClick={resetSession}>New Session</Button>}
+        />
 
         {analysis.overall_feedback && (
-          <div
-            className="rounded-2xl p-8 mb-8"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 8px 32px rgba(45,52,51,0.06)",
-            }}
-          >
-            <h3
-              className="font-bold text-lg mb-3"
-              style={{ color: "var(--dark)" }}
-            >
-              Overall Feedback
-            </h3>
-            <p className="text-[#596060]">{analysis.overall_feedback}</p>
-          </div>
+          <Card className="mb-6">
+            <SectionTitle>Overall Feedback</SectionTitle>
+            <p className="text-[var(--accent1)]">{analysis.overall_feedback}</p>
+          </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
           {analysis.correct_words && analysis.correct_words.length > 0 && (
-            <div
-              className="rounded-2xl p-6"
-              style={{ background: "var(--tertiary-container)" }}
-            >
-              <h3 className="font-bold mb-3" style={{ color: "#166534" }}>
-                Words Used Correctly
-              </h3>
+            <Card variant="accent" padding="md">
+              <h3 className="text-lg font-bold mb-3 text-[#166534]">Words Used Correctly</h3>
               <ul className="space-y-2">
                 {analysis.correct_words.map((w, i) => (
                   <li key={i} className="flex gap-2 text-sm">
                     <span
                       className="material-symbols-outlined text-base"
-                      style={{
-                        color: "#22c55e",
-                        fontVariationSettings: "'FILL' 1",
-                      }}
+                      style={{ color: "#22c55e", fontVariationSettings: "'FILL' 1" }}
                     >
                       check_circle
                     </span>
@@ -649,52 +448,32 @@ export default function PracticePage() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
           )}
           {analysis.incorrect_words && analysis.incorrect_words.length > 0 && (
-            <div
-              className="rounded-2xl p-6"
-              style={{ background: "var(--surface-container-low)" }}
-            >
-              <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
-                Words to Improve
-              </h3>
+            <Card variant="tonal" padding="md">
+              <SectionTitle>Words to Improve</SectionTitle>
               <ul className="space-y-2">
                 {analysis.incorrect_words.map((w, i) => (
                   <li key={i} className="flex gap-2 text-sm">
-                    <span
-                      className="material-symbols-outlined text-base"
-                      style={{ color: "var(--primary)" }}
-                    >
-                      arrow_forward
-                    </span>
+                    <span className="material-symbols-outlined text-base text-[var(--primary)]">arrow_forward</span>
                     <span>
                       <strong>{w.word}</strong>
                       {w.correction ? ` → ${w.correction}` : ""}
                       {w.explanation ? (
-                        <em className="block text-xs text-[#596060]">
-                          {w.explanation}
-                        </em>
+                        <em className="block text-xs text-[var(--accent1)]">{w.explanation}</em>
                       ) : null}
                     </span>
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
           )}
         </div>
 
         {analysis.correct_grammar && analysis.correct_grammar.length > 0 && (
-          <div
-            className="rounded-2xl p-6 mb-6"
-            style={{
-              background: "var(--white)",
-              boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
-            }}
-          >
-            <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
-              Grammar Used Well
-            </h3>
+          <Card padding="md" className="mb-6">
+            <SectionTitle>Grammar Used Well</SectionTitle>
             <ul className="space-y-2">
               {analysis.correct_grammar.map((g, i) => (
                 <li key={i} className="text-sm">
@@ -703,46 +482,25 @@ export default function PracticePage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         )}
 
-        {analysis.incorrect_grammar &&
-          analysis.incorrect_grammar.length > 0 && (
-            <div
-              className="rounded-2xl p-6 mb-8"
-              style={{
-                background: "var(--white)",
-                boxShadow: "0 4px 16px rgba(45,52,51,0.04)",
-              }}
-            >
-              <h3 className="font-bold mb-3" style={{ color: "var(--dark)" }}>
-                Grammar to Review
-              </h3>
-              <ul className="space-y-2">
-                {analysis.incorrect_grammar.map((g, i) => (
-                  <li key={i} className="text-sm">
-                    <strong>{g.pattern}</strong>: "{g.student_said}" → "
-                    {g.correction}"
-                    {g.explanation ? (
-                      <em className="block text-xs text-[#596060]">
-                        {g.explanation}
-                      </em>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-        <div className="flex gap-3">
-          <button
-            onClick={resetSession}
-            className="btn-primary px-6 py-3 rounded-xl text-sm font-medium"
-          >
-            New Session
-          </button>
-        </div>
-      </div>
+        {analysis.incorrect_grammar && analysis.incorrect_grammar.length > 0 && (
+          <Card padding="md" className="mb-6">
+            <SectionTitle>Grammar to Review</SectionTitle>
+            <ul className="space-y-2">
+              {analysis.incorrect_grammar.map((g, i) => (
+                <li key={i} className="text-sm">
+                  <strong>{g.pattern}</strong>: "{g.student_said}" → "{g.correction}"
+                  {g.explanation ? (
+                    <em className="block text-xs text-[var(--accent1)]">{g.explanation}</em>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </Page>
     );
   }
 
