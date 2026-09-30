@@ -7,7 +7,8 @@ from pydantic import BaseModel
 
 from database import User, Language, Settings, SUPPORTED_LANGUAGES, NATIVE_LANGUAGES
 from auth import get_current_user
-from dependencies import get_db, get_native_language, get_user_level
+from dependencies import get_db, get_native_language, get_user_level, set_user_level
+from levels import ALL_LEVELS, normalize_level, level_label
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -47,7 +48,12 @@ async def get_languages(
 
     return {
         "user_languages": [
-            {"id": lang.id, "name": lang.name, "code": lang.code}
+            {
+                "id": lang.id,
+                "name": lang.name,
+                "code": lang.code,
+                "level": get_user_level(db, user.id, lang),
+            }
             for lang in user_languages
         ],
         "available_languages": available,
@@ -55,7 +61,38 @@ async def get_languages(
         "native_language_options": NATIVE_LANGUAGES,
         "default_language_id": default_language_id,
         "user_level": user_level,
+        "available_levels": ALL_LEVELS,
     }
+
+
+class LevelUpdate(BaseModel):
+    level: str
+
+
+@router.put("/api/languages/{language_id}/level")
+async def set_language_level(
+    language_id: int,
+    body: LevelUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Set the learner's level for a language (overrides the placement result)."""
+    lang = (
+        db.query(Language)
+        .filter(Language.id == language_id, Language.user_id == user.id)
+        .first()
+    )
+    if not lang:
+        raise HTTPException(status_code=404, detail="Language not found")
+    norm = normalize_level(body.level)
+    if not norm:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid level. Must be one of: {', '.join(ALL_LEVELS)}",
+        )
+    set_user_level(db, user.id, lang, norm)
+    db.commit()
+    return {"message": "Level updated", "level": norm, "label": level_label(norm)}
 
 
 @router.post("/api/languages")
@@ -113,10 +150,10 @@ async def remove_language(
     lang_code = lang.code
 
     # Clear CEFR level setting for this language
-    setting_key = f"{lang_code}_level"
     db.query(Settings).filter(
-        Settings.user_id == user.id, Settings.key == setting_key
-    ).delete()
+        Settings.user_id == user.id,
+        Settings.key.in_([f"{lang_code}_level", f"{lang_name.lower()}_level"]),
+    ).delete(synchronize_session=False)
 
     # Clear default language setting if it pointed to this language
     default_setting = (

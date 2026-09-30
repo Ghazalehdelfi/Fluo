@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { getLanguageSlug, LangFlag } from "../utils.jsx";
+import { getLanguageSlug, LangFlag, levelLabel, levelDescription } from "../utils.jsx";
 import { Page, PageHeader, Card, Button, IconTile, Eyebrow, SectionTitle, LoadingState } from "../components/ui/index.jsx";
 import FluoBird from "../components/FluoBird.jsx";
+import LevelPicker from "../components/LevelPicker.jsx";
 
 export default function DashboardPage() {
   const {
@@ -24,10 +25,27 @@ export default function DashboardPage() {
     loadLanguages,
     fetchDashboard,
     invalidateCache,
+    saveLanguageLevel,
   } = useApp();
 
   const [view, setView] = useState("loading"); // 'onboarding-languages' | 'normal'
   const [dashData, setDashData] = useState(null);
+  const [levelEditorOpen, setLevelEditorOpen] = useState(false);
+  const [levelDraft, setLevelDraft] = useState("A1-beginner");
+  const [savingLevel, setSavingLevel] = useState(false);
+
+  async function saveLevel() {
+    setSavingLevel(true);
+    try {
+      const saved = await saveLanguageLevel(currentLanguageId, levelDraft);
+      setDashData((d) => (d ? { ...d, fluency_level: saved } : d));
+      setLevelEditorOpen(false);
+    } catch (e) {
+      alert(e.message || "Failed to save level");
+    } finally {
+      setSavingLevel(false);
+    }
+  }
 
   useEffect(() => {
     if (userLanguages.length === 0 && availableLanguages.length > 0) {
@@ -171,19 +189,13 @@ export default function DashboardPage() {
         ? "Your vocabulary is in great shape. Try a conversation to put it to work."
         : "Upload some notes or take the placement test to build your first word list.";
 
-    const fluency = dashData.fluency_level || "—";
-    const descMap = {
-      Beginner: "Just getting started",
-      Intermediate: "Building solid foundations",
-      Advanced: "Strong command of the language",
-      A1: "Beginner — basic phrases",
-      A2: "Elementary — simple communication",
-      B1: "Intermediate — everyday topics",
-      B2: "Upper Intermediate — fluent interaction",
-      C1: "Advanced — complex topics",
-      C2: "Mastery — near-native fluency",
-    };
-    const fluencyDesc = descMap[fluency] || "Take a placement test to find out";
+    const currentLang = userLanguages.find((l) => l.id === currentLanguageId);
+    const level = currentLang?.level || dashData.fluency_level || null;
+    const hasLevel = /^[ABC][12]/.test(level || "");
+    const fluency = hasLevel ? levelLabel(level) : dashData.fluency_level || "—";
+    const fluencyDesc = hasLevel
+      ? `${levelDescription(level)} · click to adjust`
+      : "Click to set your level";
 
     const actions = [
       {
@@ -218,14 +230,46 @@ export default function DashboardPage() {
         {/* Hero */}
         <Card variant="primary" className="overflow-hidden mb-6 dash-pop-in" padding="none">
           {/* Level pill pinned to the card's top-left, above the bird */}
-          <div
-            className="absolute top-5 left-5 sm:top-6 sm:left-6 z-20 rounded-full px-4 py-2 flex items-center gap-2"
-            style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}
-            title={fluencyDesc}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
-            <span className="text-xs font-semibold opacity-85">Current level:</span>
-            <span className="text-sm font-extrabold">{fluency}</span>
+          <div className="absolute top-5 left-5 sm:top-6 sm:left-6 z-20">
+            <button
+              type="button"
+              className="rounded-full px-4 py-2 flex items-center gap-2 transition-colors hover:bg-white/25"
+              style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}
+              title={fluencyDesc}
+              onClick={() => {
+                setLevelDraft(level || "A1-beginner");
+                setLevelEditorOpen((o) => !o);
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
+              <span className="text-xs font-semibold opacity-85">Current level:</span>
+              <span className="text-sm font-extrabold">{fluency}</span>
+              <span className="material-symbols-outlined opacity-80" style={{ fontSize: 16 }}>
+                {levelEditorOpen ? "expand_less" : "edit"}
+              </span>
+            </button>
+            {levelEditorOpen && (
+              <div
+                className="mt-2 rounded-2xl p-4 w-[min(22rem,calc(100vw-3rem))]"
+                style={{ background: "rgba(0,0,0,0.28)", backdropFilter: "blur(12px)" }}
+              >
+                <LevelPicker inverse compact value={levelDraft} onChange={setLevelDraft} />
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    variant="inverse"
+                    size="sm"
+                    icon="check"
+                    disabled={savingLevel || levelDraft === level}
+                    onClick={saveLevel}
+                  >
+                    {savingLevel ? "Saving…" : "Save level"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setLevelEditorOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">

@@ -141,12 +141,13 @@ async def set_user_level(
     db: Session = Depends(get_db),
 ):
     """Set the user's default CEFR level."""
-    level = body.get("level", "A1").upper()
-    valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
-    if level not in valid_levels:
+    from levels import normalize_level, ALL_LEVELS
+
+    level = normalize_level(body.get("level"))
+    if not level:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid level. Must be one of: {', '.join(valid_levels)}",
+            detail=f"Invalid level. Must be one of: {', '.join(ALL_LEVELS)}",
         )
     setting = (
         db.query(Settings)

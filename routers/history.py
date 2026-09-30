@@ -16,7 +16,8 @@ from database import (
     Settings,
 )
 from auth import get_current_user
-from dependencies import get_db, get_native_language
+from dependencies import get_db, get_native_language, get_user_level
+from levels import normalize_level, level_index
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -199,31 +200,21 @@ async def get_dashboard(
         elif high_ratio + med_ratio >= 0.4:
             fluency_level = "Intermediate"
 
+    learner_level = None
     if language_id:
-        lang_obj = db.query(Language).filter(Language.id == language_id).first()
-        cefr_key = f"{lang_obj.code}_level" if lang_obj else None
-        cefr_settings = (
-            db.query(Settings)
-            .filter(Settings.user_id == user.id, Settings.key == cefr_key)
-            .all()
-            if cefr_key
-            else []
-        )
+        learner_level = get_user_level(db, user.id, language_id)
     else:
-        cefr_settings = (
+        level_settings = (
             db.query(Settings)
             .filter(Settings.user_id == user.id, Settings.key.like("%_level"))
             .all()
         )
-
-    if cefr_settings:
-        cefr_order = ["A1", "A2", "B1", "B2", "C1", "C2"]
-        best = max(
-            cefr_settings,
-            key=lambda s: cefr_order.index(s.value) if s.value in cefr_order else -1,
-        )
-        if best.value in cefr_order:
-            fluency_level = best.value
+        candidates = [normalize_level(s.value) for s in level_settings]
+        candidates = [c for c in candidates if c]
+        if candidates:
+            learner_level = max(candidates, key=level_index)
+    if learner_level:
+        fluency_level = learner_level
 
     # Daily streak: count consecutive days with any activity
     activity_dates = set()

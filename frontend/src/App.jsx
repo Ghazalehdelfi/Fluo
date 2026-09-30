@@ -198,6 +198,28 @@ export default function App() {
     } catch {}
   }, [apiFetch]);
 
+  // Persist a learner level for a language and reflect it locally.
+  const saveLanguageLevel = useCallback(
+    async (langId, level) => {
+      const resp = await apiFetch(`/api/languages/${langId}/level`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ level }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to update level");
+      }
+      const data = await resp.json();
+      setUserLanguages((langs) =>
+        langs.map((l) => (l.id === langId ? { ...l, level: data.level } : l)),
+      );
+      invalidateCache(langId, "dashboard");
+      return data.level;
+    },
+    [apiFetch],
+  );
+
   const fetchVocabulary = useCallback(
     async (langId) => {
       const cache = getLangCache(langId);
@@ -400,6 +422,7 @@ export default function App() {
     navigate,
     navigateToActiveSection,
     loadLanguages,
+    saveLanguageLevel,
     fetchVocabulary,
     fetchGrammar,
     fetchStats,

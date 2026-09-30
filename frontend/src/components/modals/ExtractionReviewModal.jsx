@@ -8,8 +8,19 @@ import { useApp } from "../../context/AppContext";
  * Props:
  *  - results: { vocabulary: [...], grammar: [...], vocabulary_added, grammar_added }
  *  - onClose: () => void
+ *  - onSave?: async (vocab, grammar) => void — when provided, replaces the
+ *    default per-item PUT behaviour (used for not-yet-persisted suggestions)
+ *  - title?, subtitle?, saveLabel?: header copy overrides
  */
-export default function ExtractionReviewModal({ results, onClose }) {
+export default function ExtractionReviewModal({
+  results,
+  onClose,
+  onSave,
+  title = "Review Extracted Items",
+  subtitle,
+  saveLabel = "Save",
+  hideEmpty = false,
+}) {
   const { apiFetch } = useApp();
   const [vocab, setVocab] = useState(results.vocabulary || []);
   const [grammar, setGrammar] = useState(results.grammar || []);
@@ -43,6 +54,11 @@ export default function ExtractionReviewModal({ results, onClose }) {
     setSaving(true);
     setError(null);
     try {
+      if (onSave) {
+        await onSave(vocab, grammar);
+        setSaved(true);
+        return;
+      }
       const requests = [];
       for (const v of vocab) {
         if (!v.id) continue; // only items already persisted can be updated
@@ -120,12 +136,11 @@ export default function ExtractionReviewModal({ results, onClose }) {
               className="text-xl font-extrabold tracking-tight"
               style={{ color: "var(--dark)" }}
             >
-              Review Extracted Items
+              {title}
             </h2>
             <p className="text-xs text-[#596060] mt-0.5">
-              {results.vocabulary_added ?? vocab.length} words ·{" "}
-              {results.grammar_added ?? grammar.length} grammar added — edit
-              anything before saving
+              {subtitle ??
+                `${results.vocabulary_added ?? vocab.length} words · ${results.grammar_added ?? grammar.length} grammar added — edit anything before saving`}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -149,7 +164,7 @@ export default function ExtractionReviewModal({ results, onClose }) {
                 color: "var(--on-primary)",
               }}
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Saving…" : saveLabel}
             </button>
             <button
               onClick={onClose}
@@ -176,6 +191,7 @@ export default function ExtractionReviewModal({ results, onClose }) {
           )}
 
           {/* Vocabulary */}
+          {!(hideEmpty && vocab.length === 0) && (
           <section>
             <h3
               className="text-sm font-bold tracking-wider uppercase mb-3 flex items-center gap-2"
@@ -247,8 +263,10 @@ export default function ExtractionReviewModal({ results, onClose }) {
               </div>
             )}
           </section>
+          )}
 
           {/* Grammar */}
+          {!(hideEmpty && grammar.length === 0) && (
           <section>
             <h3
               className="text-sm font-bold tracking-wider uppercase mb-3 flex items-center gap-2"
@@ -322,6 +340,7 @@ export default function ExtractionReviewModal({ results, onClose }) {
               </div>
             )}
           </section>
+          )}
         </div>
       </div>
     </div>

@@ -9,20 +9,15 @@ import json
 from typing import Dict, List, Optional
 from agents.config import LLM_MODEL, DEFAULT_TARGET_LANGUAGE, DEFAULT_NATIVE_LANGUAGE
 from agents.logging_utils import Colors, get_logger, call_llm_with_json
+from levels import (
+    CEFR_LEVELS,
+    CEFR_DESCRIPTIONS as LEVEL_DESCRIPTIONS,
+    level_prompt_text,
+    normalize_level,
+    split_level,
+)
 
 logger = get_logger(__name__)
-
-# CEFR levels in order of difficulty
-CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
-
-LEVEL_DESCRIPTIONS = {
-    "A1": "Beginner",
-    "A2": "Elementary",
-    "B1": "Intermediate",
-    "B2": "Upper Intermediate",
-    "C1": "Advanced",
-    "C2": "Proficient",
-}
 
 # How many questions per level during the adaptive test
 QUESTIONS_PER_LEVEL = 3
@@ -179,41 +174,77 @@ Return ONLY the JSON, no extra text."""
         )
         return determined
 
-    # ── Starter Content Generation ──────────────────────────────
+    def suggest_full_level(self, question_results: List[Dict]) -> str:
+        """Suggest a full ``"B1-intermediate"`` style level: the CEFR band from
+        ``determine_level`` plus a sub-level based on accuracy within that band
+        (and whether the student made any headway in the next band)."""
+        cefr = self.determine_level(question_results)
+        by_level: Dict[str, List[bool]] = {}
+        for r in question_results:
+            by_level.setdefault(r.get("level", "A1"), []).append(bool(r.get("correct")))
 
-    def generate_starter_content(self, level: str) -> Dict:
-        """Generate 100 vocabulary words and 10 grammar rules at the given CEFR level.
+        own = by_level.get(cefr, [])
+        own_acc = sum(own) / len(own) if own else 0.0
+        next_idx = CEFR_LEVELS.index(cefr) + 1
+        nxt = by_level.get(CEFR_LEVELS[next_idx], []) if next_idx < len(CEFR_LEVELS) else []
+        next_acc = sum(nxt) / len(nxt) if nxt else 0.0
 
-        Returns dict with 'vocabulary' list and 'grammar' list matching the
-        existing note_extractor schema.
-        """
-        logger.info(
-            f"   {Colors.CYAN}Generating starter content at {level} for {self.target_language}...{Colors.END}"
-        )
+        perfect_here = own_acc >= 0.99
+        progress_next = next_acc > 0
+        if own_acc < ADVANCE_THRESHOLD:
+            sub = "beginner"  # only possible at A1 when the student failed A1
+        elif perfect_here and progress_next:
+            sub = "advanced"
+        elif perfect_here or progress_next:
+            sub = "intermediate"
+        else:
+            sub = "beginner"
+        return f"{cefr}-{sub}"
 
-        # Split into two calls to stay within token limits and get better quality
+    # ── Content Generation ──────────────────────────────────────
 
-        # --- Vocabulary (two batches of 50) ---
-        all_vocab = []
-        for batch in range(2):
-            batch_num = batch + 1
-            exclude_words = ""
-            if all_vocab:
-                existing = ", ".join(v["target_word"] for v in all_vocab)
-                exclude_words = f"\n\nDo NOT include any of these words (already generated): {existing}"
+    def generate_vocabulary(
+        self,
+        level: str,
+        count: int = 50,
+        exclude: Optional[List[str]] = None,
+        batch_size: int = 50,
+    ) -> List[Dict]:
+        """Generate ``count`` vocabulary items at ``level`` (full or CEFR-only
+        level string), avoiding any words in ``exclude``. Batched to stay
+        within token limits."""
+        level = normalize_level(level) or level
+        cefr, _ = split_level(level)
+        level_desc = level_prompt_text(level)
+        exclude_set = {w.strip().lower() for w in (exclude or []) if w and w.strip()}
+        all_vocab: List[Dict] = []
+        remaining = count
+        batch_num = 0
+        total_batches = max(1, -(-count // batch_size))
 
-            vocab_prompt = f"""You are an expert {self.target_language} language teacher creating a starter vocabulary set.
+        while remaining > 0:
+            batch_num += 1
+            n = min(batch_size, remaining)
+            avoid = sorted(exclude_set | {v["target_word"].lower() for v in all_vocab if v.get("target_word")})
+            exclude_words = (
+                f"\n\nDo NOT include any of these words (the student already knows them): {', '.join(avoid[-400:])}"
+                if avoid
+                else ""
+            )
 
-Generate exactly 50 vocabulary words appropriate for a {level} ({LEVEL_DESCRIPTIONS[level]}) level student.
-This is batch {batch_num} of 2 — provide different words from batch 1.
+            vocab_prompt = f"""You are an expert {self.target_language} language teacher building a student's vocabulary set.
+
+Generate exactly {n} NEW vocabulary words appropriate for a student at {level_desc}.
+This is batch {batch_num} of {total_batches}.
 
 The student's native language is {self.native_language}.
 
 Requirements:
-- Words should be useful, common, and appropriate for the {level} CEFR level
+- Words should be useful, common, and appropriate for the {cefr} CEFR level and the stated sub-level
 - Include a mix of nouns, verbs, adjectives, and useful phrases
-- Cover everyday topics: greetings, food, family, work, travel, etc.
-- Example sentences should use grammar appropriate for {level} level
+- Cover a broad range of everyday topics: greetings, food, family, work, travel, health, emotions, etc.
+- Example sentences should use grammar appropriate for {cefr} level
+- Every word must be different from the excluded list below (no inflections or trivial variants of them either)
 {exclude_words}
 
 Return valid JSON:
@@ -222,12 +253,12 @@ Return valid JSON:
         {{
             "target_word": "the {self.target_language} word",
             "native_translation": "{self.native_language} meaning",
-            "example_sentence": "A simple example sentence using this word at {level} level"
+            "example_sentence": "A simple example sentence using this word at {cefr} level"
         }}
     ]
 }}
 
-Return exactly 50 items. Return ONLY valid JSON."""
+Return exactly {n} items. Return ONLY valid JSON."""
 
             batch_result = call_llm_with_json(
                 self.client.chat.completions.create,
@@ -236,27 +267,55 @@ Return exactly 50 items. Return ONLY valid JSON."""
                 max_completion_tokens=8000,
                 response_format={"type": "json_object"},
             )
-            batch_vocab = batch_result.get("vocabulary", [])
+            batch_vocab = [
+                v
+                for v in batch_result.get("vocabulary", [])
+                if v.get("target_word")
+                and v["target_word"].strip().lower() not in exclude_set
+                and v["target_word"].strip().lower()
+                not in {x["target_word"].lower() for x in all_vocab}
+            ]
             all_vocab.extend(batch_vocab)
+            remaining -= n
             logger.info(
                 f"   {Colors.GREEN}✓ Vocabulary batch {batch_num}: {len(batch_vocab)} words{Colors.END}"
             )
 
-        # --- Grammar ---
-        grammar_prompt = f"""You are an expert {self.target_language} language teacher creating a starter grammar set.
+        return all_vocab
 
-Generate exactly 10 grammar rules/concepts appropriate for a {level} ({LEVEL_DESCRIPTIONS[level]}) level student.
+    def generate_grammar(
+        self,
+        level: str,
+        count: int = 10,
+        exclude: Optional[List[str]] = None,
+    ) -> List[Dict]:
+        """Generate ``count`` grammar concepts at ``level``, avoiding any
+        concept names in ``exclude``."""
+        level = normalize_level(level) or level
+        cefr, _ = split_level(level)
+        level_desc = level_prompt_text(level)
+        exclude_list = [c.strip() for c in (exclude or []) if c and c.strip()]
+        exclude_text = (
+            "\n- The student ALREADY KNOWS these concepts — do NOT repeat or rephrase them:\n  "
+            + "\n  ".join(f"- {c}" for c in exclude_list[-150:])
+            if exclude_list
+            else ""
+        )
+
+        grammar_prompt = f"""You are an expert {self.target_language} language teacher building a student's grammar curriculum.
+
+Generate exactly {count} NEW grammar rules/concepts appropriate for a student at {level_desc}.
 The student's native language is {self.native_language}.
 
 Requirements:
-- Grammar concepts should be essential for the {level} level
+- Grammar concepts should be essential for the {cefr} level and the stated sub-level
 - Progress from simpler to more complex within the level
 - Include clear descriptions and multiple examples
 - Examples should be in {self.target_language} with {self.native_language} translations in parentheses
 - CRITICAL: Every concept must be DISTINCT. Do NOT generate overlapping or near-duplicate rules.
   For example, do NOT include both "Present Tense" and "Simple Present Tense" — pick one.
   Each concept should cover a clearly different grammatical topic from all others in the list.
-- Review your list before returning and merge or remove any concepts that are too similar to each other.
+- Review your list before returning and merge or remove any concepts that are too similar to each other.{exclude_text}
 
 Return valid JSON:
 {{
@@ -269,7 +328,7 @@ Return valid JSON:
     ]
 }}
 
-Return exactly 10 items. Return ONLY valid JSON."""
+Return exactly {count} items. Return ONLY valid JSON."""
 
         grammar_result = call_llm_with_json(
             self.client.chat.completions.create,
@@ -278,10 +337,24 @@ Return exactly 10 items. Return ONLY valid JSON."""
             max_completion_tokens=4000,
             response_format={"type": "json_object"},
         )
-        grammar = grammar_result.get("grammar", [])
+        grammar = [g for g in grammar_result.get("grammar", []) if g.get("concept_name")]
+        logger.info(
+            f"   {Colors.GREEN}✓ Generated {len(grammar)} grammar concepts at {level}{Colors.END}"
+        )
+        return grammar
 
+    def generate_starter_content(self, level: str) -> Dict:
+        """Generate 100 vocabulary words and 10 grammar rules at the given level.
+
+        Returns dict with 'vocabulary' list and 'grammar' list matching the
+        existing note_extractor schema.
+        """
+        logger.info(
+            f"   {Colors.CYAN}Generating starter content at {level} for {self.target_language}...{Colors.END}"
+        )
+        all_vocab = self.generate_vocabulary(level, count=100)
+        grammar = self.generate_grammar(level, count=10)
         logger.info(
             f"   {Colors.GREEN}✓ Generated {len(all_vocab)} vocab + {len(grammar)} grammar at {level}{Colors.END}"
         )
-
         return {"vocabulary": all_vocab, "grammar": grammar}

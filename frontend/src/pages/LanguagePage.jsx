@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { speakText, buildProficiencyDots } from "../utils.jsx";
+import { speakText, buildProficiencyDots, levelLabel } from "../utils.jsx";
 import GrammarDetailModal from "../components/modals/GrammarDetailModal";
+import ExtractionReviewModal from "../components/modals/ExtractionReviewModal";
+import CreditIcon from "../components/CreditIcon";
 import {
   Page,
   PageHeader,
@@ -28,6 +30,9 @@ export default function LanguagePage({ section: initialSection }) {
     fetchStats,
     invalidateCache,
     setPracticeGrammarId,
+    userLanguages,
+    showLoading,
+    hideLoading,
   } = useApp();
 
   const [section, setSection] = useState(initialSection || "vocabulary");
@@ -43,6 +48,62 @@ export default function LanguagePage({ section: initialSection }) {
   const [practiceMenuOpen, setPracticeMenuOpen] = useState(false);
   const [detailGrammar, setDetailGrammar] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState(null); // { kind, vocabulary, grammar, level }
+
+  const currentLevel = userLanguages.find((l) => l.id === currentLanguageId)?.level;
+
+  async function suggestMore(kind) {
+    const isVocab = kind === "vocabulary";
+    showLoading(
+      `Finding new ${isVocab ? "words" : "grammar"} for ${levelLabel(currentLevel)}...`,
+    );
+    try {
+      const resp = await apiFetch(
+        `/api/languages/${currentLanguageId}/suggest-${isVocab ? "vocabulary" : "grammar"}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: isVocab ? 20 : 5 }),
+        },
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert(err.detail || "Could not generate suggestions");
+        return;
+      }
+      const data = await resp.json();
+      setSuggestions({
+        kind,
+        level: data.level,
+        vocabulary: data.vocabulary || [],
+        grammar: data.grammar || [],
+      });
+    } catch {
+      alert("Could not generate suggestions");
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function saveSuggestions(vocab, gram) {
+    const resp = await apiFetch(
+      `/api/languages/${currentLanguageId}/save-suggestions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vocabulary: vocab, grammar: gram }),
+      },
+    );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to save suggestions");
+    }
+    invalidateCache(currentLanguageId);
+    setSuggestions(null);
+    setLoading(true);
+    await Promise.all([loadStats(), loadVocabulary(), loadGrammar()]);
+    setLoading(false);
+  }
 
   useEffect(() => {
     setSection(initialSection || "vocabulary");
@@ -238,14 +299,26 @@ export default function LanguagePage({ section: initialSection }) {
         <Card variant="tonal">
           <SectionTitle
             actions={
-              <Segmented
-                value={vocabFilter}
-                onChange={setVocabFilter}
-                options={[
-                  { value: "all", label: "All Words" },
-                  { value: "low", label: "Needs Practice" },
-                ]}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Segmented
+                  value={vocabFilter}
+                  onChange={setVocabFilter}
+                  options={[
+                    { value: "all", label: "All Words" },
+                    { value: "low", label: "Needs Practice" },
+                  ]}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="auto_awesome"
+                  title={`Suggest new words for ${levelLabel(currentLevel)}`}
+                  onClick={() => suggestMore("vocabulary")}
+                >
+                  Suggest more words
+                  <CreditIcon size={14} />
+                </Button>
+              </div>
             }
           >
             Vocabulary
@@ -256,11 +329,16 @@ export default function LanguagePage({ section: initialSection }) {
             <EmptyState
               icon="menu_book"
               title="No vocabulary yet"
-              description="Upload some notes to get started!"
+              description="Upload some notes or let us suggest words for your level."
               action={
-                <Button variant="secondary" icon="upload_file" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
-                  Upload Notes
-                </Button>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button icon="auto_awesome" onClick={() => suggestMore("vocabulary")}>
+                    Suggest words for my level
+                  </Button>
+                  <Button variant="secondary" icon="upload_file" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
+                    Upload Notes
+                  </Button>
+                </div>
               }
             />
           ) : (
@@ -463,18 +541,38 @@ export default function LanguagePage({ section: initialSection }) {
       {/* Grammar Section */}
       {section === "grammar" && (
         <Card variant="tonal">
-          <SectionTitle>Grammar Concepts</SectionTitle>
+          <SectionTitle
+            actions={
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="auto_awesome"
+                title={`Suggest new grammar for ${levelLabel(currentLevel)}`}
+                onClick={() => suggestMore("grammar")}
+              >
+                Suggest more grammar
+                <CreditIcon size={14} />
+              </Button>
+            }
+          >
+            Grammar Concepts
+          </SectionTitle>
           {loading ? (
             <LoadingState text="Loading grammar…" />
           ) : grammar.length === 0 ? (
             <EmptyState
               icon="school"
               title="No grammar concepts yet"
-              description="Upload some notes to get started!"
+              description="Upload some notes or let us suggest grammar for your level."
               action={
-                <Button variant="secondary" icon="upload_file" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
-                  Upload Notes
-                </Button>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button icon="auto_awesome" onClick={() => suggestMore("grammar")}>
+                    Suggest grammar for my level
+                  </Button>
+                  <Button variant="secondary" icon="upload_file" onClick={() => navigate(`/${currentLanguageSlug}/notes`)}>
+                    Upload Notes
+                  </Button>
+                </div>
               }
             />
           ) : (
@@ -599,6 +697,17 @@ export default function LanguagePage({ section: initialSection }) {
         <GrammarDetailModal
           grammar={detailGrammar}
           onClose={() => setDetailGrammar(null)}
+        />
+      )}
+      {suggestions && (
+        <ExtractionReviewModal
+          results={suggestions}
+          title={suggestions.kind === "vocabulary" ? "Suggested Words" : "Suggested Grammar"}
+          subtitle={`Picked for ${levelLabel(suggestions.level)} — remove anything you already know, then add the rest`}
+          saveLabel="Add to my list"
+          hideEmpty
+          onSave={saveSuggestions}
+          onClose={() => setSuggestions(null)}
         />
       )}
     </Page>

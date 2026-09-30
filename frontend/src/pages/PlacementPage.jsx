@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import CreditIcon from "../components/CreditIcon";
+import LevelPicker from "../components/LevelPicker.jsx";
 import { useApp } from "../context/AppContext.jsx";
+import { levelLabel, splitLevel } from "../utils.jsx";
 import {
   Page,
   PageHeader,
@@ -21,6 +23,8 @@ export default function PlacementPage() {
     showLoading,
     hideLoading,
     invalidateCache,
+    saveLanguageLevel,
+    setUserLanguages,
   } = useApp();
   const [view, setView] = useState("choice"); // 'choice' | 'test' | 'results' | 'review'
 
@@ -41,6 +45,9 @@ export default function PlacementPage() {
 
   // Results state
   const [results, setResults] = useState(null);
+  const [chosenLevel, setChosenLevel] = useState(null); // user-adjusted level
+  const [savedLevel, setSavedLevel] = useState(null); // last level persisted
+  const [savingLevel, setSavingLevel] = useState(false);
 
   // Review state
   const [reviewVocab, setReviewVocab] = useState([]);
@@ -105,7 +112,15 @@ export default function PlacementPage() {
       }
       const delay = isDontKnow ? 0 : 1200;
       if (data.completed || data.finished) {
+        const suggested = data.suggested_level || data.determined_level;
         setResults(data);
+        setChosenLevel(suggested);
+        setSavedLevel(suggested); // backend already persisted the suggestion
+        setUserLanguages((langs) =>
+          langs.map((l) =>
+            l.id === currentLanguageId ? { ...l, level: suggested } : l,
+          ),
+        );
         setView("results");
       } else if (data.question || data.next_question) {
         setTimeout(() => {
@@ -134,9 +149,37 @@ export default function PlacementPage() {
     }
   }
 
+  async function saveChosenLevel() {
+    if (!chosenLevel || !currentLanguageId) return;
+    setSavingLevel(true);
+    try {
+      const saved = await saveLanguageLevel(currentLanguageId, chosenLevel);
+      setSavedLevel(saved);
+    } catch (e) {
+      alert(e.message || "Failed to save level");
+    } finally {
+      setSavingLevel(false);
+    }
+  }
+
   async function generateContent() {
     if (!sessionId) return;
-    showLoading("Generating vocabulary and grammar for your level...");
+    // Make sure any adjusted level is persisted first — the backend generates
+    // content from the language's saved level.
+    if (chosenLevel && chosenLevel !== savedLevel) {
+      showLoading("Saving your level...");
+      try {
+        const saved = await saveLanguageLevel(currentLanguageId, chosenLevel);
+        setSavedLevel(saved);
+      } catch (e) {
+        hideLoading();
+        alert(e.message || "Failed to save level");
+        return;
+      }
+    }
+    showLoading(
+      `Generating vocabulary and grammar for ${levelLabel(chosenLevel || savedLevel)}...`,
+    );
     try {
       const resp = await apiFetch(
         `/api/placement-test/${sessionId}/generate-content`,
@@ -414,7 +457,11 @@ export default function PlacementPage() {
 
   // ---- Results View ----
   if (view === "results" && results) {
-    const level = results.level || results.determined_level;
+    const suggested = results.suggested_level || results.determined_level;
+    const current = chosenLevel || suggested;
+    const { cefr } = splitLevel(current);
+    const adjusted = current !== suggested;
+    const levelSaved = current === savedLevel;
     return (
       <Page>
         <PageHeader
@@ -424,11 +471,48 @@ export default function PlacementPage() {
         />
 
         <div>
-          <Card variant="primary" className="mb-6 flex items-center gap-8">
-            <div className="text-7xl font-extrabold tracking-tight">{level || "—"}</div>
-            <div>
-              <p className="text-lg font-bold">Determined Level</p>
-              <p className="text-sm mt-1 opacity-80">Based on your performance</p>
+          <Card variant="primary" className="mb-6">
+            <div className="flex flex-col md:flex-row md:items-start gap-8">
+              <div className="flex items-center gap-6 shrink-0">
+                <div className="text-7xl font-extrabold tracking-tight">{cefr}</div>
+                <div>
+                  <p className="text-lg font-bold">{levelLabel(chosenLevel || suggested)}</p>
+                  <p className="text-sm mt-1 opacity-80">
+                    {adjusted
+                      ? `We suggested ${levelLabel(suggested)} — you've adjusted it.`
+                      : "Our suggestion, based on your answers"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex-1 md:border-l md:border-white/20 md:pl-8">
+                <p className="text-sm font-semibold mb-3 opacity-90">
+                  Not quite right? Pick the level that feels like you.
+                </p>
+                <LevelPicker
+                  inverse
+                  value={chosenLevel || suggested}
+                  onChange={setChosenLevel}
+                />
+                <div className="mt-4 flex items-center gap-3">
+                  <Button
+                    variant="inverse"
+                    size="sm"
+                    icon={levelSaved ? "check" : "save"}
+                    disabled={savingLevel || levelSaved}
+                    onClick={saveChosenLevel}
+                  >
+                    {levelSaved ? "Level saved" : savingLevel ? "Saving…" : "Save level"}
+                  </Button>
+                  {adjusted && (
+                    <button
+                      className="text-xs underline opacity-80"
+                      onClick={() => setChosenLevel(suggested)}
+                    >
+                      Reset to suggestion
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </Card>
 
@@ -464,7 +548,7 @@ export default function PlacementPage() {
 
           <div className="flex gap-3">
             <Button size="lg" icon="auto_fix_high" className="flex-1" onClick={generateContent}>
-              Generate Vocabulary for My Level
+              Generate Vocabulary for {levelLabel(current)}
               <CreditIcon />
             </Button>
             <Button size="lg" variant="secondary" onClick={() => navigate(`/${currentLanguageSlug}/`)}>

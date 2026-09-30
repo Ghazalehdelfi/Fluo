@@ -87,6 +87,50 @@ export function escapeHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
+// ── Learner levels ─────────────────────────────────────────────────
+// A level is a CEFR band plus a sub-level, stored as e.g. "B1-intermediate".
+export const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+export const CEFR_DESCRIPTIONS = {
+  A1: "Beginner",
+  A2: "Elementary",
+  B1: "Intermediate",
+  B2: "Upper Intermediate",
+  C1: "Advanced",
+  C2: "Proficient",
+};
+export const SUB_LEVELS = ["beginner", "intermediate", "advanced"];
+
+export function splitLevel(level) {
+  const [cefr = "A1", sub = "intermediate"] = String(level || "")
+    .replace(/[_\s]+/g, "-")
+    .split("-");
+  return {
+    cefr: CEFR_LEVELS.includes(cefr.toUpperCase()) ? cefr.toUpperCase() : "A1",
+    sub: SUB_LEVELS.includes(sub.toLowerCase()) ? sub.toLowerCase() : "intermediate",
+  };
+}
+
+export function joinLevel(cefr, sub) {
+  return `${cefr}-${sub}`;
+}
+
+export function levelLabel(level) {
+  if (!level) return "—";
+  const { cefr, sub } = splitLevel(level);
+  return `${cefr} · ${sub.charAt(0).toUpperCase()}${sub.slice(1)}`;
+}
+
+export function levelDescription(level) {
+  const { cefr, sub } = splitLevel(level);
+  const band = CEFR_DESCRIPTIONS[cefr];
+  const pos = {
+    beginner: "just starting this band",
+    intermediate: "comfortably within this band",
+    advanced: "nearly ready for the next band",
+  }[sub];
+  return `${band} — ${pos}`;
+}
+
 export function buildProficiencyDots(fluency) {
   const levels = { low: 1, medium: 2, high: 3 };
   const filled = levels[fluency] || 0;

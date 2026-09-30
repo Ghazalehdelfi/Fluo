@@ -29,6 +29,7 @@ from database import (
 from auth import get_current_user, require_teacher
 from cost_tracker import TrackedOpenAI
 from dependencies import get_db, get_api_key, get_native_language, get_user_level
+from levels import level_prompt_text
 from agents.grammar_practice_agent import GrammarPracticeAgent
 from agents.logging_utils import get_logger
 
@@ -689,10 +690,9 @@ async def generate_homework_questions(
 
     api_key = get_api_key()
     native_lang = get_native_language(db, teacher.id)
-    user_level = get_user_level(db, teacher.id)
-
     lang = db.query(Language).filter(Language.id == grammar.language_id).first()
     target_language = lang.name if lang else "Unknown"
+    user_level = level_prompt_text(get_user_level(db, teacher.id, lang))
 
     # Auto-generate detail card if missing
     if not grammar.detail_card:

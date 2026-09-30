@@ -1,6 +1,5 @@
 """Placement test routes: /api/placement-test/*."""
 
-import json
 import time
 import uuid
 import logging
@@ -9,10 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from database import User, Language, Settings, Vocabulary, Grammar, SessionLocal
+from database import User, Language, SessionLocal
 from auth import get_current_user
 from cost_tracker import TrackedOpenAI, check_sufficient_credits
-from dependencies import get_db, get_api_key, get_native_language
+from dependencies import (
+    get_db,
+    get_api_key,
+    get_native_language,
+    get_user_level,
+    set_user_level,
+)
 from session_store import active_sessions, SESSION_TTL_SECONDS
 from agents.placement_agent import (
     PlacementTestAgent,
@@ -22,13 +27,8 @@ from agents.placement_agent import (
     LEVEL_DESCRIPTIONS,
 )
 from agents.romanization_utils import is_persian, romanize_question_finglish
-from grammar_utils import (
-    GRAMMAR_SIMILARITY_HIGH,
-    cosine_similarity,
-    embed_text,
-    grammar_embed_text,
-    find_most_similar_grammar,
-)
+from content_utils import save_generated_content
+from levels import ALL_LEVELS, level_label
 from agents.logging_utils import Colors, get_logger, log_api_call as _log_api_call
 
 logger = get_logger(__name__)
@@ -201,24 +201,16 @@ async def placement_test_answer(
             session["questions_at_level"] = 0
             session["correct_at_level"] = 0
         else:
-            determined = agent.determine_level(session["results"])
-            session["determined_level"] = determined
+            suggested = agent.suggest_full_level(session["results"])
+            determined = suggested.split("-")[0]
+            session["determined_level"] = suggested
 
-            lang_code = session["language_name"].lower()
-            setting_key = f"{lang_code}_level"
-            existing = (
-                db.query(Settings)
-                .filter(Settings.user_id == user.id, Settings.key == setting_key)
-                .first()
-            )
-            if existing:
-                existing.value = determined
-            else:
-                db.add(Settings(user_id=user.id, key=setting_key, value=determined))
+            lang = db.query(Language).filter(Language.id == session["language_id"]).first()
+            set_user_level(db, user.id, lang, suggested)
             db.commit()
 
             logger.info(
-                f"{Colors.GREEN}✅ PLACEMENT TEST complete: {determined} "
+                f"{Colors.GREEN}✅ PLACEMENT TEST complete: {suggested} "
                 f"({LEVEL_DESCRIPTIONS[determined]}){Colors.END}"
             )
 
@@ -227,7 +219,10 @@ async def placement_test_answer(
                 "explanation": evaluation.get("explanation", ""),
                 "completed": True,
                 "determined_level": determined,
+                "suggested_level": suggested,
+                "suggested_level_label": level_label(suggested),
                 "level_name": LEVEL_DESCRIPTIONS[determined],
+                "available_levels": ALL_LEVELS,
                 "results_summary": _build_results_summary(session["results"]),
             }
 
@@ -263,22 +258,25 @@ async def placement_test_generate_content(
         raise HTTPException(status_code=404, detail="Placement test session not found")
 
     session = active_sessions[session_key]
-    determined = session.get("determined_level")
-    if not determined:
+    if not session.get("determined_level"):
         raise HTTPException(status_code=400, detail="Test not yet completed")
 
+    # Use the language's current level — the user may have adjusted the
+    # suggestion on the results screen.
+    level = get_user_level(db, user.id, session["language_id"])
     agent: PlacementTestAgent = session["agent"]
 
     logger.info(
-        f"{Colors.CYAN}📚 Generating starter content at {determined} for "
+        f"{Colors.CYAN}📚 Generating starter content at {level} for "
         f"{session['language_name']}...{Colors.END}"
     )
 
-    content = agent.generate_starter_content(determined)
+    content = agent.generate_starter_content(level)
     session["generated_content"] = content
 
     return {
-        "level": determined,
+        "level": level,
+        "level_label": level_label(level),
         "vocabulary": content["vocabulary"],
         "grammar": content["grammar"],
         "vocabulary_count": len(content["vocabulary"]),
@@ -299,107 +297,9 @@ async def placement_test_save_content(
         raise HTTPException(status_code=404, detail="Placement test session not found")
 
     session = active_sessions[session_key]
-    lang_id = session["language_id"]
-    api_key = get_api_key()
-
-    # Deduplicate vocabulary
-    seen_vocab = set()
-    vocabulary = []
-    for v in body.vocabulary:
-        key = v.get("target_word", "").lower()
-        if key and key not in seen_vocab:
-            seen_vocab.add(key)
-            vocabulary.append(v)
-
-    # Deduplicate grammar
-    seen_grammar = set()
-    grammar = []
-    for g in body.grammar:
-        key = g.get("concept_name", "").lower()
-        if key and key not in seen_grammar:
-            seen_grammar.add(key)
-            grammar.append(g)
-
-    # Save vocabulary
-    added_vocab = 0
-    for vocab in vocabulary:
-        existing = (
-            db.query(Vocabulary)
-            .filter(
-                Vocabulary.language_id == lang_id,
-                Vocabulary.target_word.ilike(vocab.get("target_word", "")),
-            )
-            .first()
-        )
-        if not existing and vocab.get("target_word"):
-            db.add(
-                Vocabulary(
-                    language_id=lang_id,
-                    target_word=vocab["target_word"],
-                    native_translation=vocab.get("native_translation", ""),
-                    example_sentence=vocab.get("example_sentence", ""),
-                    fluency_level="low",
-                )
-            )
-            added_vocab += 1
-
-    # Save grammar with semantic deduplication
-    added_grammar = 0
-    all_existing_grammar = (
-        db.query(Grammar).filter(Grammar.language_id == lang_id).all()
+    added_vocab, added_grammar = save_generated_content(
+        db, get_api_key(), session["language_id"], body.vocabulary, body.grammar
     )
-    accepted_in_batch: list = []  # (concept_name_lower, embedding_vec)
-
-    for gram in grammar:
-        if not gram.get("concept_name"):
-            continue
-
-        existing_exact = (
-            db.query(Grammar)
-            .filter(
-                Grammar.language_id == lang_id,
-                Grammar.concept_name.ilike(gram["concept_name"]),
-            )
-            .first()
-        )
-        if existing_exact:
-            continue
-
-        concept_lower = gram["concept_name"].lower()
-        if any(concept_lower == name for name, _ in accepted_in_batch):
-            continue
-
-        candidate_text = grammar_embed_text(
-            gram["concept_name"], gram.get("description", "")
-        )
-        candidate_vec = embed_text(api_key, candidate_text)
-
-        most_similar, similarity = find_most_similar_grammar(
-            candidate_vec, all_existing_grammar, api_key, db
-        )
-        if similarity >= GRAMMAR_SIMILARITY_HIGH:
-            continue
-
-        batch_best = max(
-            (cosine_similarity(candidate_vec, vec) for _, vec in accepted_in_batch),
-            default=0.0,
-        )
-        if batch_best >= GRAMMAR_SIMILARITY_HIGH:
-            continue
-
-        accepted_in_batch.append((concept_lower, candidate_vec))
-        db.add(
-            Grammar(
-                language_id=lang_id,
-                concept_name=gram["concept_name"],
-                description=gram.get("description", ""),
-                examples=gram.get("examples", ""),
-                fluency_level="low",
-                embedding=json.dumps(candidate_vec),
-            )
-        )
-        added_grammar += 1
-
     db.commit()
     del active_sessions[session_key]
 

@@ -35,6 +35,7 @@ from dependencies import (
     get_user_level,
     get_elevenlabs_client,
 )
+from levels import level_prompt_text
 import time
 from session_store import active_sessions, SESSION_TTL_SECONDS
 from tasks import rebuild_topics
@@ -164,7 +165,7 @@ async def start_lesson(
     api_key = get_api_key()
     native_lang = get_native_language(db, user.id)
     target_lang = lang.name
-    level = get_user_level(db, user.id)
+    level = level_prompt_text(get_user_level(db, user.id, lang))
 
     _log(
         "POST",
@@ -333,7 +334,7 @@ async def start_scenario(
     api_key = get_api_key()
     native_lang = get_native_language(db, user.id)
     target_lang = lang.name
-    level = get_user_level(db, user.id)
+    level = level_prompt_text(get_user_level(db, user.id, lang))
 
     session_id = str(uuid.uuid4())
     tracked_client = TrackedOpenAI(

@@ -40,6 +40,7 @@ from routers import (
     conversations,
     history,
     placement,
+    suggestions,
     billing,
     classes,
 )
@@ -98,6 +99,7 @@ for _router_module in [
     conversations,
     history,
     placement,
+    suggestions,
     billing,
     # Teacher persona routes (classes/homework) — only mounted when enabled
     *([classes] if feature_flags.ENABLE_TEACHER_FEATURES else []),

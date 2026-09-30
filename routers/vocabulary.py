@@ -13,6 +13,7 @@ from database import User, Language, Vocabulary, Grammar, SessionLocal
 from auth import get_current_user
 from cost_tracker import TrackedOpenAI, check_sufficient_credits
 from dependencies import get_db, get_api_key, get_native_language, get_user_level
+from levels import level_prompt_text
 from grammar_utils import (
     GRAMMAR_SIMILARITY_HIGH,
     GRAMMAR_SIMILARITY_LOW,
@@ -276,7 +277,7 @@ async def resolve_pending_grammar(
                 detail="Insufficient credits. Please purchase more credits to continue.",
             )
 
-        user_level = get_user_level(db, user.id)
+        user_level = level_prompt_text(get_user_level(db, user.id, lang))
         session_id = str(uuid.uuid4())
         tracked_client = TrackedOpenAI(
             api_key, user_id=user.id, session_id=session_id, db_factory=SessionLocal
@@ -392,8 +393,8 @@ async def get_grammar_detail_card(
 
     api_key = get_api_key()
     native_lang = get_native_language(db, user.id)
-    user_level = get_user_level(db, user.id)
     lang = item.language
+    user_level = level_prompt_text(get_user_level(db, user.id, lang))
 
     session_id = str(uuid.uuid4())
     tracked_client = TrackedOpenAI(

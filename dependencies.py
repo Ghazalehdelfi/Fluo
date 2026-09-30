@@ -84,13 +84,68 @@ def get_native_language(db: Session, user_id: int) -> str:
     return native.value if native else "English"
 
 
-def get_user_level(db: Session, user_id: int) -> str:
-    """Get the user's default CEFR level from settings (default A1)."""
-    from database import Settings
+def _level_setting_keys(language) -> list[str]:
+    """Candidate settings keys for a language's level, most preferred first.
 
+    Historically the placement test wrote ``{name.lower()}_level`` while other
+    code read ``{code}_level``; we accept both and write the code-based key.
+    """
+    keys = []
+    if language is not None:
+        if getattr(language, "code", None):
+            keys.append(f"{language.code}_level")
+        if getattr(language, "name", None):
+            keys.append(f"{language.name.lower()}_level")
+    return keys
+
+
+def get_user_level(db: Session, user_id: int, language=None) -> str:
+    """Get the learner's level for ``language`` (a ``Language`` row or id),
+    falling back to the account-wide ``user_level`` and then the default.
+
+    Always returns a canonical ``"B1-intermediate"`` style string.
+    """
+    from database import Settings, Language
+    from levels import normalize_level, DEFAULT_LEVEL
+
+    if isinstance(language, int):
+        language = db.query(Language).filter(Language.id == language).first()
+
+    for key in _level_setting_keys(language) + ["user_level"]:
+        setting = (
+            db.query(Settings)
+            .filter(Settings.user_id == user_id, Settings.key == key)
+            .first()
+        )
+        norm = normalize_level(setting.value) if setting else None
+        if norm:
+            return norm
+    return DEFAULT_LEVEL
+
+
+def set_user_level(db: Session, user_id: int, language, level: str) -> str:
+    """Persist a canonical level for ``language`` (writes ``{code}_level`` and
+    removes any legacy name-based key). Caller commits."""
+    from database import Settings
+    from levels import normalize_level
+
+    norm = normalize_level(level)
+    if not norm:
+        raise ValueError(f"Invalid level: {level}")
+
+    keys = _level_setting_keys(language)
+    primary, legacy = keys[0], keys[1:]
+    for key in legacy:
+        db.query(Settings).filter(
+            Settings.user_id == user_id, Settings.key == key
+        ).delete()
     setting = (
         db.query(Settings)
-        .filter(Settings.user_id == user_id, Settings.key == "user_level")
+        .filter(Settings.user_id == user_id, Settings.key == primary)
         .first()
     )
-    return setting.value if setting else "A1"
+    if setting:
+        setting.value = norm
+    else:
+        db.add(Settings(user_id=user_id, key=primary, value=norm))
+    return norm

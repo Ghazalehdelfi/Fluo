@@ -12,6 +12,7 @@ from database import User, Language, Grammar, SessionLocal
 from auth import get_current_user
 from cost_tracker import TrackedOpenAI, check_sufficient_credits
 from dependencies import get_db, get_api_key, get_native_language, get_user_level
+from levels import level_prompt_text
 from session_store import grammar_practice_sessions, SESSION_TTL_SECONDS
 from agents.grammar_practice_agent import GrammarPracticeAgent
 from agents.logging_utils import get_logger, log_api_call as _log_api_call
@@ -60,8 +61,8 @@ async def start_grammar_practice(
 
     api_key = get_api_key()
     native_lang = get_native_language(db, user.id)
-    user_level = get_user_level(db, user.id)
     lang = item.language
+    user_level = level_prompt_text(get_user_level(db, user.id, lang))
 
     if item.detail_card:
         try:
